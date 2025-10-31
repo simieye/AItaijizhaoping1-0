@@ -24,7 +24,7 @@ import { AdminActivityLog } from '@/components/AdminActivityLog';
 // @ts-ignore;
 import { SystemHealthCard } from '@/components/SystemHealthCard';
 // @ts-ignore;
-import { cachedCallDataSource, debounce } from '@/lib/cache';
+import { cachedCallDataSource, debounce, getSystemHealth } from '@/lib/cache';
 export default function AdminDashboard(props) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
@@ -69,6 +69,13 @@ export default function AdminDashboard(props) {
     hitRate: 0,
     totalRequests: 0,
     cacheHits: 0
+  });
+  const [systemHealth, setSystemHealth] = useState({
+    tokenRemaining: 30,
+    errorRate: 0,
+    totalRequests: 0,
+    last5MinErrorCount: 0,
+    cacheSize: 0
   });
   const {
     toast
@@ -277,7 +284,10 @@ export default function AdminDashboard(props) {
         newUsersToday: newUsersToday.total || 0,
         lastUpdated: new Date().toISOString()
       });
-      updateCacheStats();
+
+      // 更新系统健康状态
+      const health = getSystemHealth();
+      setSystemHealth(health);
     } catch (error) {
       console.error('获取仪表盘数据失败:', error);
       toast({
@@ -455,23 +465,10 @@ export default function AdminDashboard(props) {
     }
   };
 
-  // 更新缓存统计
-  const updateCacheStats = () => {
-    setCacheStats(prev => ({
-      ...prev,
-      totalRequests: prev.totalRequests + 1,
-      hitRate: Math.random() * 100
-    }));
-  };
-
-  // 处理刷新Token
-  const handleRefreshToken = async newToken => {
-    toast({
-      title: 'Token已刷新',
-      description: '系统访问令牌已更新',
-      variant: 'success'
-    });
-    // 可以在这里更新全局token状态
+  // 更新系统健康状态
+  const updateSystemHealth = () => {
+    const health = getSystemHealth();
+    setSystemHealth(health);
   };
 
   // 防抖筛选变化
@@ -629,6 +626,24 @@ export default function AdminDashboard(props) {
       pageId
     });
   };
+
+  // 处理Token刷新
+  const handleRefreshToken = async newToken => {
+    toast({
+      title: 'Token已刷新',
+      description: '系统访问令牌已更新',
+      variant: 'success'
+    });
+    // 可以在这里更新全局token状态
+  };
+
+  // 实时更新系统健康状态
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateSystemHealth();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
   useEffect(() => {
     fetchDashboardData();
     fetchActivityLogs();
@@ -701,7 +716,13 @@ export default function AdminDashboard(props) {
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    缓存命中率: {cacheStats.hitRate.toFixed(1)}%
+                    缓存命中率: {systemHealth.hitRate}%
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Token剩余: {systemHealth.tokenRemaining}分钟
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    错误率: {systemHealth.errorRate}%
                   </div>
                   <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                     <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
@@ -716,7 +737,7 @@ export default function AdminDashboard(props) {
 
               {/* 系统健康卡片 */}
               <div className="mb-6">
-                <SystemHealthCard $w={$w} onRefreshToken={handleRefreshToken} />
+                <SystemHealthCard $w={$w} onRefreshToken={handleRefreshToken} systemHealth={systemHealth} />
               </div>
 
               {/* 统计卡片 */}

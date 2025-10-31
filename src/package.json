@@ -1,0 +1,27 @@
+
+{
+  "name": "ai-recruitment-platform-e2e-tests",
+  "version": "1.0.0",
+  "description": "AI招聘平台端到端测试套件",
+  "scripts": {
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:run:headed": "cypress run --headed",
+    "test:e2e": "cypress run --browser chrome",
+    "test:e2e:firefox": "cypress run --browser firefox",
+    "test:e2e:edge": "cypress run --browser edge",
+    "test:component": "cypress run --component",
+    "test:smoke": "cypress run --spec 'cypress/e2e/**/*-flow.cy.js'",
+    "test:regression": "cypress run --spec 'cypress/e2e/**/*.cy.js'"
+  },
+  "devDependencies": {
+    "cypress": "^13.6.0",
+    "cypress-axe": "^1.5.0",
+    "cypress-file-upload": "^5.0.8",
+    "cypress-real-events": "^1.11.0",
+    "cypress-wait-until": "^3.0.1"
+  },
+  "dependencies": {
+    "axe-core": "^4.8.0"
+  }
+}

@@ -1,37 +1,32 @@
 
-// 缓存管理工具
+// 缓存管理器
 class CacheManager {
   constructor() {
     this.cache = new Map();
-    this.defaultTTL = 5 * 60 * 1000; // 5分钟
+    this.pendingRequests = new Map();
+    this.errorStats = {
+      totalRequests: 0,
+      errorRequests: 0,
+      last5MinErrors: []
+    };
+    this.tokenExpiry = 30 * 60 * 1000; // 30分钟
+    this.tokenStartTime = Date.now();
   }
 
-  // 生成缓存key
+  // 生成缓存键
   generateKey(dataSourceName, methodName, params) {
     return `${dataSourceName}_${methodName}_${JSON.stringify(params)}`;
   }
 
-  // 设置缓存
-  set(key, data, ttl = this.defaultTTL) {
-    const expiresAt = Date.now() + ttl;
-    this.cache.set(key, {
-      data,
-      expiresAt,
-      timestamp: Date.now()
-    });
-  }
-
-  // 获取缓存
-  get(key) {
-    const cached = this.cache.get(key);
-    if (!cached) return null;
-    
-    if (Date.now() > cached.expiresAt) {
-      this.cache.delete(key);
-      return null;
-    }
-    
-    return cached.data;
+  // 防抖函数
+  debounce(func, delay = 300) {
+    let timeoutId;
+    return (...args) => {
+      return new Promise((resolve) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => resolve(func.apply(this, args)), delay);
+      });
+    };
   }
 
   // 检查缓存是否有效
@@ -39,143 +34,183 @@ class CacheManager {
     const cached = this.cache.get(key);
     if (!cached) return false;
     
-    return Date.now() <= cached.expiresAt;
+    const now = Date.now();
+    const isExpired = now - cached.timestamp > 60000; // 60秒过期
+    
+    if (isExpired) {
+      this.cache.delete(key);
+      return false;
+    }
+    
+    return true;
+  }
+
+  // 获取缓存
+  get(key) {
+    if (this.isValid(key)) {
+      return this.cache.get(key).data;
+    }
+    return null;
+  }
+
+  // 设置缓存
+  set(key, data) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
   }
 
   // 清除缓存
-  clear(key) {
-    if (key) {
-      this.cache.delete(key);
-    } else {
-      this.cache.clear();
-    }
+  clear() {
+    this.cache.clear();
   }
 
   // 获取缓存统计
   getStats() {
-    const now = Date.now();
-    let validCount = 0;
-    let expiredCount = 0;
+    const totalRequests = this.errorStats.totalRequests;
+    const errorRequests = this.errorStats.errorRequests;
+    const errorRate = totalRequests > 0 ? (errorRequests / totalRequests) * 100 : 0;
     
-    for (const [key, value] of this.cache) {
-      if (now <= value.expiresAt) {
-        validCount++;
-      } else {
-        expiredCount++;
-      }
-    }
+    // 清理5分钟前的错误记录
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    this.errorStats.last5MinErrors = this.errorStats.last5MinErrors.filter(
+      timestamp => timestamp > fiveMinutesAgo
+    );
     
     return {
-      total: this.cache.size,
-      valid: validCount,
-      expired: expiredCount,
-      hitRate: this.cache.size > 0 ? (validCount / this.cache.size * 100).toFixed(2) : 0
+      hitRate: this.cache.size > 0 ? 100 : 0,
+      totalRequests,
+      errorRate: errorRate.toFixed(2),
+      last5MinErrorCount: this.errorStats.last5MinErrors.length,
+      cacheSize: this.cache.size,
+      tokenRemaining: Math.max(0, this.tokenExpiry - (Date.now() - this.tokenStartTime))
     };
   }
 
-  // 清理过期缓存
-  cleanup() {
-    const now = Date.now();
-    for (const [key, value] of this.cache) {
-      if (now > value.expiresAt) {
-        this.cache.delete(key);
-      }
-    }
+  // 记录错误
+  recordError() {
+    this.errorStats.totalRequests++;
+    this.errorStats.errorRequests++;
+    this.errorStats.last5MinErrors.push(Date.now());
+  }
+
+  // 记录成功请求
+  recordSuccess() {
+    this.errorStats.totalRequests++;
+  }
+
+  // 更新token时间
+  updateTokenExpiry(expiryMinutes = 30) {
+    this.tokenExpiry = expiryMinutes * 60 * 1000;
+    this.tokenStartTime = Date.now();
+  }
+
+  // 获取token剩余时间（分钟）
+  getTokenRemainingMinutes() {
+    const remaining = this.tokenExpiry - (Date.now() - this.tokenStartTime);
+    return Math.max(0, Math.floor(remaining / 60000));
   }
 }
 
-// 创建全局缓存实例
-export const cacheManager = new CacheManager();
+// 创建全局缓存管理器实例
+const cacheManager = new CacheManager();
+
+// 防抖缓存调用
+export const cachedCallDataSource = async ($w, request, options = {}) => {
+  const {
+    forceRefresh = false,
+    debounceDelay = 300,
+    retryOnTokenExpiry = true
+  } = options;
+
+  const key = cacheManager.generateKey(
+    request.dataSourceName,
+    request.methodName,
+    request.params
+  );
+
+  // 如果强制刷新，清除缓存
+  if (forceRefresh) {
+    cacheManager.clear();
+  }
+
+  // 检查缓存
+  if (!forceRefresh && cacheManager.get(key)) {
+    return cacheManager.get(key);
+  }
+
+  // 检查是否有待处理的相同请求
+  if (cacheManager.pendingRequests.has(key)) {
+    return cacheManager.pendingRequests.get(key);
+  }
+
+  // 防抖包装的实际请求函数
+  const debouncedRequest = cacheManager.debounce(async () => {
+    try {
+      const result = await $w.cloud.callDataSource(request);
+      cacheManager.recordSuccess();
+      cacheManager.set(key, result);
+      return result;
+    } catch (error) {
+      cacheManager.recordError();
+      
+      // 处理token过期
+      if (error.code === 'TOKEN_EXPIRED' && retryOnTokenExpiry) {
+        try {
+          // 尝试刷新token
+          const refreshResult = await $w.cloud.callFunction({
+            name: 'refreshAccessToken',
+            data: {}
+          });
+          
+          if (refreshResult.success) {
+            cacheManager.updateTokenExpiry();
+            // 重试原请求
+            const retryResult = await $w.cloud.callDataSource(request);
+            cacheManager.recordSuccess();
+            cacheManager.set(key, retryResult);
+            return retryResult;
+          }
+        } catch (refreshError) {
+          console.error('Token刷新失败:', refreshError);
+          throw error;
+        }
+      }
+      
+      throw error;
+    } finally {
+      cacheManager.pendingRequests.delete(key);
+    }
+  }, debounceDelay);
+
+  // 执行防抖请求
+  const promise = debouncedRequest();
+  cacheManager.pendingRequests.set(key, promise);
+  
+  return promise;
+};
 
 // 防抖函数
 export const debounce = (func, delay = 300) => {
   let timeoutId;
   return (...args) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(async () => {
-        try {
-          const result = await func(...args);
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      }, delay);
+      timeoutId = setTimeout(() => resolve(func.apply(this, args)), delay);
     });
   };
 };
 
-// 节流函数
-export const throttle = (func, delay = 300) => {
-  let lastCall = 0;
-  return (...args) => {
-    const now = Date.now();
-    if (now - lastCall >= delay) {
-      lastCall = now;
-      return func(...args);
-    }
-  };
+// 获取系统健康状态
+export const getSystemHealth = () => {
+  return cacheManager.getStats();
 };
 
-// 带缓存的数据源调用包装器
-export const cachedCallDataSource = async ($w, params, options = {}) => {
-  const {
-    useCache = true,
-    ttl = 5 * 60 * 1000,
-    forceRefresh = false
-  } = options;
-
-  const key = cacheManager.generateKey(
-    params.dataSourceName,
-    params.methodName,
-    params.params
-  );
-
-  // 如果强制刷新，清除缓存
-  if (forceRefresh) {
-    cacheManager.clear(key);
-  }
-
-  // 检查缓存
-  if (useCache && cacheManager.isValid(key)) {
-    console.log(`Cache hit for ${key}`);
-    return cacheManager.get(key);
-  }
-
-  try {
-    // 执行实际请求
-    const result = await $w.cloud.callDataSource(params);
-    
-    // 缓存结果
-    if (useCache) {
-      cacheManager.set(key, result, ttl);
-    }
-    
-    console.log(`Cache miss for ${key}, fetched from API`);
-    return result;
-  } catch (error) {
-    console.error(`API call failed for ${key}:`, error);
-    throw error;
-  }
+// 手动清除缓存
+export const clearCache = () => {
+  cacheManager.clear();
 };
 
-// 缓存监控工具
-export const useCacheMonitor = () => {
-  const [stats, setStats] = useState(cacheManager.getStats());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(cacheManager.getStats());
-      cacheManager.cleanup();
-    }, 10000); // 每10秒清理一次
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return {
-    stats,
-    clearCache: () => cacheManager.clear(),
-    getCache: (key) => cacheManager.get(key),
-    setCache: (key, data, ttl) => cacheManager.set(key, data, ttl)
-  };
-};
+// 导出缓存管理器实例
+export { cacheManager };
