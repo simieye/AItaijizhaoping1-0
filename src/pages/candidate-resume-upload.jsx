@@ -1,14 +1,16 @@
 // @ts-ignore;
 import React, { useState, useEffect, useCallback } from 'react';
 // @ts-ignore;
-import { Button, Card, CardContent, CardHeader, CardTitle, Progress, Alert, AlertDescription, AlertTitle, useToast } from '@/components/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, Progress, Alert, AlertDescription, AlertTitle, useToast, Badge } from '@/components/ui';
 // @ts-ignore;
-import { Upload, FileText, CheckCircle, AlertCircle, X, Eye, Download, Badge } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, X, Eye, Download, MessageSquare } from 'lucide-react';
 
+// @ts-ignore;
+import { cachedCallDataSource } from '@/lib/cache';
 // @ts-ignore;
 import { FileUploadZone } from '@/components/FileUploadZone';
 // @ts-ignore;
-import { cachedCallDataSource } from '@/lib/cache';
+import { ChatInterface } from '@/components/ChatInterface';
 export default function CandidateResumeUpload(props) {
   const [files, setFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState({});
@@ -19,6 +21,8 @@ export default function CandidateResumeUpload(props) {
   const [successMessage, setSuccessMessage] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [candidateProfile, setCandidateProfile] = useState(null);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
   const {
     toast
   } = useToast();
@@ -184,7 +188,7 @@ export default function CandidateResumeUpload(props) {
           name: candidateProfile?.name || '候选人',
           email: candidateProfile?.email || '',
           phone: candidateProfile?.phone || '',
-          skills: ['JavaScript', 'React', 'Node.js', 'Python'],
+          skills: ['JavaScript', 'React', 'Node.js', 'Python', 'SQL', 'Docker'],
           experience: [{
             title: '前端开发工程师',
             company: '示例公司',
@@ -197,12 +201,20 @@ export default function CandidateResumeUpload(props) {
             year: '2022'
           }],
           summary: '具有3年前端开发经验的工程师',
-          keywords: ['前端', 'React', 'JavaScript', '团队协作']
+          keywords: ['前端', 'React', 'JavaScript', '团队协作', '敏捷开发']
         };
         setResumeData(mockResumeData);
 
         // 保存AI分析结果
         await saveAIAnalysis(mockResumeData);
+
+        // 添加AI聊天消息
+        setChatMessages([{
+          id: 1,
+          type: 'bot',
+          content: '您好！我已经分析了您的简历。您的技能与多个职位匹配度很高。我可以帮您优化简历或推荐合适的职位。',
+          timestamp: new Date().toISOString()
+        }]);
       }, 2000);
     } catch (error) {
       console.error('AI处理失败:', error);
@@ -267,6 +279,28 @@ export default function CandidateResumeUpload(props) {
     $w.utils.navigateTo({
       pageId: 'candidate-dashboard'
     });
+  };
+
+  // 处理AI聊天
+  const handleChatMessage = async message => {
+    const newMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: message,
+      timestamp: new Date().toISOString()
+    };
+    setChatMessages(prev => [...prev, newMessage]);
+
+    // AI回复
+    setTimeout(() => {
+      const aiResponse = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: '感谢您的提问！基于您的简历，我建议您：1) 突出您的React和Node.js技能 2) 添加更多项目经验 3) 考虑申请前端开发职位',
+        timestamp: new Date().toISOString()
+      };
+      setChatMessages(prev => [...prev, aiResponse]);
+    }, 1000);
   };
 
   // 渲染文件列表
@@ -350,7 +384,7 @@ export default function CandidateResumeUpload(props) {
         }
       `}</style>
       
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-6">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             上传简历
@@ -406,7 +440,7 @@ export default function CandidateResumeUpload(props) {
             </div>
           </div>
 
-          {/* 右侧：帮助信息 */}
+          {/* 右侧：帮助信息和AI聊天 */}
           <div>
             <Card>
               <CardHeader>
@@ -438,6 +472,21 @@ export default function CandidateResumeUpload(props) {
                     </ul>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* AI聊天助手 */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>AI助手</span>
+                  <Button variant="ghost" size="sm" onClick={() => setShowChat(!showChat)}>
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {showChat && <ChatInterface messages={chatMessages} onSendMessage={handleChatMessage} placeholder="询问关于简历的问题..." />}
               </CardContent>
             </Card>
 
