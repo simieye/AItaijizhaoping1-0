@@ -8,6 +8,7 @@ import RECRUITER_JOB-POST from '../pages/recruiter-job-post.jsx';
 import RECRUITER_CANDIDATES from '../pages/recruiter-candidates.jsx';
 import RECRUITER_COMMUNICATION from '../pages/recruiter-communication.jsx';
 import RECRUITER_DASHBOARD from '../pages/recruiter-dashboard.jsx';
+import ADMIN_DASHBOARD from '../pages/admin-dashboard.jsx';
 export const routers = [{
   id: "candidate-login",
   component: CANDIDATE_LOGIN
@@ -38,4 +39,7 @@ export const routers = [{
 }, {
   id: "recruiter-dashboard",
   component: RECRUITER_DASHBOARD
+}, {
+  id: "admin-dashboard",
+  component: ADMIN_DASHBOARD
 }]

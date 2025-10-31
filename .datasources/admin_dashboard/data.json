@@ -1,0 +1,371 @@
+
+[
+  {
+    "_id": "dashboard_001",
+    "dashboardId": "dd0e8400-e29b-41d4-a716-446655440001",
+    "adminId": "550e8400-e29b-41d4-a716-446655440005",
+    "adminName": "系统管理员",
+    "adminRole": "super_admin",
+    "sessionType": "dashboard_view",
+    "actionType": "view_dashboard",
+    "targetEntity": "system_overview",
+    "targetId": "system_wide",
+    "actionDetails": {
+      "viewedSections": ["users", "jobs", "applications", "compliance"],
+      "filtersApplied": {
+        "timeRange": "last_24h",
+        "status": "all"
+      },
+      "exportRequested": false
+    },
+    "kpiSnapshot": {
+      "totalUsers": 1247,
+      "activeUsers": 892,
+      "totalCandidates": 687,
+      "totalRecruiters": 234,
+      "totalJobs": 156,
+      "activeJobs": 109,
+      "totalApplications": 1243,
+      "pendingApplications": 234,
+      "complianceScore": 94,
+      "deiScore": 87,
+      "aiAccuracy": 92
+    },
+    "aiChatSession": null,
+    "systemNotification": null,
+    "complianceAlert": null,
+    "performanceMetrics": {
+      "pageLoadTime": 1.2,
+      "apiResponseTime": 0.8,
+      "dataRefreshInterval": 30000
+    },
+    "ipAddress": "203.205.128.33",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "sessionDuration": 1800000,
+    "isSuccess": true,
+    "errorMessage": null,
+    "tags": ["dashboard", "overview", "real_time"],
+    "metadata": {
+      "theme": "dark",
+      "language": "zh-CN",
+      "timezone": "Asia/Shanghai"
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "dashboard_002",
+    "dashboardId": "dd0e8400-e29b-41d4-a716-446655440002",
+    "adminId": "550e8400-e29b-41d4-a716-446655440005",
+    "adminName": "系统管理员",
+    "adminRole": "super_admin",
+    "sessionType": "ai_chat",
+    "actionType": "ai_interaction",
+    "targetEntity": "ai_assistant",
+    "targetId": "ai_bot_001",
+    "actionDetails": {
+      "query": "生成最新的合规报告",
+      "response": "已生成合规报告，发现3个潜在风险",
+      "intent": "compliance_report",
+      "confidence": 0.95
+    },
+    "kpiSnapshot": null,
+    "aiChatSession": {
+      "sessionId": "chat_001",
+      "messages": [
+        {
+          "role": "user",
+          "content": "生成最新的合规报告",
+          "timestamp": 1730313600000
+        },
+        {
+          "role": "assistant",
+          "content": "正在生成合规报告...\n\n 当前合规评分：94%\n️ 发现3个潜在风险\n 建议优化：职位描述偏见检测\n\n报告已生成，可在\"合规审计\"模块查看详情。",
+          "timestamp": 1730313601000
+        }
+      ],
+      "duration": 15000,
+      "satisfaction": 5,
+      "resolved": true
+    },
+    "systemNotification": null,
+    "complianceAlert": null,
+    "performanceMetrics": {
+      "responseTime": 1.5,
+      "tokenUsage": 256,
+      "modelVersion": "v2.3.1"
+    },
+    "ipAddress": "203.205.128.33",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "sessionDuration": 15000,
+    "isSuccess": true,
+    "errorMessage": null,
+    "tags": ["ai_chat", "compliance", "report_generation"],
+    "metadata": {
+      "model": "gpt-4",
+      "temperature": 0.7,
+      "maxTokens": 1000
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313601000
+  },
+  {
+    "_id": "dashboard_003",
+    "dashboardId": "dd0e8400-e29b-41d4-a716-446655440003",
+    "adminId": "550e8400-e29b-41d4-a716-446655440005",
+    "adminName": "系统管理员",
+    "adminRole": "super_admin",
+    "sessionType": "compliance_alert",
+    "actionType": "risk_detection",
+    "targetEntity": "job_post",
+    "targetId": "660e8400-e29b-41d4-a716-446655440001",
+    "actionDetails": {
+      "alertType": "bias_detection",
+      "severity": "medium",
+      "detectedIssues": [
+        {
+          "type": "gender_bias",
+          "description": "职位描述中使用\"aggressive\"等词汇",
+          "suggestion": "替换为\"assertive\"",
+          "confidence": 0.92
+        }
+      ],
+      "autoAction": "flagged_for_review",
+      "manualReviewRequired": true
+    },
+    "kpiSnapshot": null,
+    "aiChatSession": null,
+    "systemNotification": {
+      "notificationId": "notif_001",
+      "type": "compliance_alert",
+      "title": "偏见检测警报",
+      "message": "检测到职位描述存在潜在性别偏见",
+      "severity": "medium",
+      "actionUrl": "/admin/compliance/job/660e8400-e29b-41d4-a716-446655440001",
+      "isRead": false,
+      "priority": "high"
+    },
+    "complianceAlert": {
+      "alertId": "alert_001",
+      "ruleId": "bias_detection_rule_001",
+      "entityType": "job_post",
+      "entityId": "660e8400-e29b-41d4-a716-446655440001",
+      "violationType": "gender_bias",
+      "severity": "medium",
+      "status": "pending_review",
+      "createdBy": "ai_system",
+      "assignedTo": "compliance_team"
+    },
+    "performanceMetrics": {
+      "detectionAccuracy": 0.92,
+      "falsePositiveRate": 0.08,
+      "processingTime": 0.5
+    },
+    "ipAddress": "203.205.128.33",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "sessionDuration": 5000,
+    "isSuccess": true,
+    "errorMessage": null,
+    "tags": ["compliance", "bias_detection", "alert", "job_post"],
+    "metadata": {
+      "detectionModel": "bias_detector_v2.3.1",
+      "threshold": 0.85,
+      "confidence": 0.92
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "dashboard_004",
+    "dashboardId": "dd0e8400-e29b-41d4-a716-446655440004",
+    "adminId": "550e8400-e29b-41d4-a716-446655440005",
+    "adminName": "系统管理员",
+    "adminRole": "super_admin",
+    "sessionType": "user_management",
+    "actionType": "bulk_operation",
+    "targetEntity": "user",
+    "targetId": "batch_update_001",
+    "actionDetails": {
+      "operation": "bulk_status_update",
+      "affectedUsers": 45,
+      "fromStatus": "inactive",
+      "toStatus": "active",
+      "filterCriteria": {
+        "lastLoginBefore": "2024-05-01",
+        "role": "candidate"
+      },
+      "dryRun": false,
+      "confirmationRequired": true
+    },
+    "kpiSnapshot": {
+      "beforeOperation": {
+        "totalInactive": 156,
+        "totalActive": 1091
+      },
+      "afterOperation": {
+        "totalInactive": 111,
+        "totalActive": 1136
+      }
+    },
+    "aiChatSession": null,
+    "systemNotification": {
+      "notificationId": "notif_002",
+      "type": "operation_complete",
+      "title": "批量操作完成",
+      "message": "已成功更新45个用户状态",
+      "severity": "info",
+      "actionUrl": "/admin/users/batch-results/batch_update_001",
+      "isRead": false,
+      "priority": "medium"
+    },
+    "complianceAlert": null,
+    "performanceMetrics": {
+      "operationTime": 2.3,
+      "affectedRows": 45,
+      "rollbackAvailable": true
+    },
+    "ipAddress": "203.205.128.33",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "sessionDuration": 138000,
+    "isSuccess": true,
+    "errorMessage": null,
+    "tags": ["user_management", "bulk_operation", "status_update"],
+    "metadata": {
+      "operationType": "batch_update",
+      "backupCreated": true,
+      "auditTrail": true
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "dashboard_005",
+    "dashboardId": "dd0e8400-e29b-41d4-a716-446655440005",
+    "adminId": "550e8400-e29b-41d4-a716-446655440006",
+    "adminName": "合规专员",
+    "adminRole": "compliance_officer",
+    "sessionType": "report_generation",
+    "actionType": "export_data",
+    "targetEntity": "compliance_report",
+    "targetId": "monthly_compliance_2024_06",
+    "actionDetails": {
+      "reportType": "monthly_compliance",
+      "dateRange": {
+        "start": "2024-06-01",
+        "end": "2024-06-30"
+      },
+      "includedModules": ["user_compliance", "job_compliance", "ai_compliance", "dei_metrics"],
+      "format": "pdf",
+      "recipients": ["compliance@company.com", "legal@company.com"],
+      "schedule": "monthly"
+    },
+    "kpiSnapshot": {
+      "reportMetrics": {
+        "totalAudits": 156,
+        "complianceScore": 94,
+        "riskAlerts": 12,
+        "resolvedIssues": 9,
+        "pendingIssues": 3
+      },
+      "deiMetrics": {
+        "genderDistribution": {
+          "female": 45.5,
+          "male": 52.3,
+          "nonBinary": 2.2
+        },
+        "ethnicityMetrics": {
+          "asian": 35.2,
+          "white": 45.8,
+          "black": 12.5,
+          "hispanic": 6.5
+        }
+      }
+    },
+    "aiChatSession": null,
+    "systemNotification": {
+      "notificationId": "notif_003",
+      "type": "report_ready",
+      "title": "合规报告已生成",
+      "message": "6月份合规报告已生成并发送给相关人员",
+      "severity": "info",
+      "actionUrl": "/admin/reports/compliance/monthly_2024_06",
+      "isRead": false,
+      "priority": "low"
+    },
+    "complianceAlert": null,
+    "performanceMetrics": {
+      "generationTime": 15.6,
+      "fileSize": "2.3MB",
+      "pages": 45
+    },
+    "ipAddress": "203.205.128.34",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    "sessionDuration": 60000,
+    "isSuccess": true,
+    "errorMessage": null,
+    "tags": ["report_generation", "compliance", "monthly", "export"],
+    "metadata": {
+      "template": "compliance_monthly_v2.1",
+      "watermark": true,
+      "encryption": "AES-256"
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "dashboard_006",
+    "dashboardId": "dd0e8400-e29b-41d4-a716-446655440006",
+    "adminId": "550e8400-e29b-41d4-a716-446655440007",
+    "adminName": "数据分析师",
+    "adminRole": "data_analyst",
+    "sessionType": "real_time_monitoring",
+    "actionType": "kpi_update",
+    "targetEntity": "system_metrics",
+    "targetId": "real_time_001",
+    "actionDetails": {
+      "updateType": "real_time_refresh",
+      "metricsUpdated": ["user_count", "job_count", "application_count", "compliance_score"],
+      "refreshInterval": 30000,
+      "dataSources": ["user", "job_post", "application", "compliance_audit"],
+      "cacheStrategy": "redis_5min"
+    },
+    "kpiSnapshot": {
+      "realTimeMetrics": {
+        "activeUsers": 892,
+        "newUsersToday": 23,
+        "activeJobs": 109,
+        "newJobsToday": 5,
+        "totalApplications": 1243,
+        "newApplicationsToday": 45,
+        "complianceScore": 94,
+        "systemUptime": 99.9
+      },
+      "performanceMetrics": {
+        "apiLatency": 0.8,
+        "cacheHitRate": 0.95,
+        "errorRate": 0.001
+      }
+    },
+    "aiChatSession": null,
+    "systemNotification": null,
+    "complianceAlert": null,
+    "performanceMetrics": {
+      "refreshTime": 1.2,
+      "dataAccuracy": 0.999,
+      "cacheEfficiency": 0.95
+    },
+    "ipAddress": "203.205.128.35",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+    "sessionDuration": 1800000,
+    "isSuccess": true,
+    "errorMessage": null,
+    "tags": ["real_time", "monitoring", "kpi", "performance"],
+    "metadata": {
+      "dashboardVersion": "v3.2.1",
+      "websocketEnabled": true,
+      "pushNotifications": true
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  }
+]

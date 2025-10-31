@@ -1,0 +1,115 @@
+
+{
+  "name": "admin_dashboard",
+  "title": "管理员总控数据模型",
+  "schemas": [
+    {
+      "name": "dashboardId",
+      "title": "仪表盘ID",
+      "type": "String"
+    },
+    {
+      "name": "adminId",
+      "title": "管理员ID",
+      "type": "String"
+    },
+    {
+      "name": "adminName",
+      "title": "管理员姓名",
+      "type": "String"
+    },
+    {
+      "name": "adminRole",
+      "title": "管理员角色",
+      "type": "String"
+    },
+    {
+      "name": "sessionType",
+      "title": "会话类型",
+      "type": "String"
+    },
+    {
+      "name": "actionType",
+      "title": "操作类型",
+      "type": "String"
+    },
+    {
+      "name": "targetEntity",
+      "title": "目标实体",
+      "type": "String"
+    },
+    {
+      "name": "targetId",
+      "title": "目标ID",
+      "type": "String"
+    },
+    {
+      "name": "actionDetails",
+      "title": "操作详情",
+      "type": "Object"
+    },
+    {
+      "name": "kpiSnapshot",
+      "title": "KPI快照",
+      "type": "Object"
+    },
+    {
+      "name": "aiChatSession",
+      "title": "AI客服会话",
+      "type": "Object"
+    },
+    {
+      "name": "systemNotification",
+      "title": "系统通知",
+      "type": "Object"
+    },
+    {
+      "name": "complianceAlert",
+      "title": "合规警报",
+      "type": "Object"
+    },
+    {
+      "name": "performanceMetrics",
+      "title": "性能指标",
+      "type": "Object"
+    },
+    {
+      "name": "ipAddress",
+      "title": "IP地址",
+      "type": "String"
+    },
+    {
+      "name": "userAgent",
+      "title": "用户代理",
+      "type": "String"
+    },
+    {
+      "name": "sessionDuration",
+      "title": "会话时长",
+      "type": "Number"
+    },
+    {
+      "name": "isSuccess",
+      "title": "是否成功",
+      "type": "Boolean"
+    },
+    {
+      "name": "errorMessage",
+      "title": "错误信息",
+      "type": "String"
+    },
+    {
+      "name": "tags",
+      "title": "标签",
+      "type": "Array",
+      "items": {
+        "type": "String"
+      }
+    },
+    {
+      "name": "metadata",
+      "title": "元数据",
+      "type": "Object"
+    }
+  ]
+}
