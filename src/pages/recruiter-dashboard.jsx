@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Progress, useT
 import { Users, Briefcase, TrendingUp, MessageSquare, DollarSign, Clock, Eye, RefreshCw } from 'lucide-react';
 
 // @ts-ignore;
-import { RecruiterAIChat } from '@/components/RecruiterAIChat';
-// @ts-ignore;
 import { RecruiterStats } from '@/components/RecruiterStats';
 // @ts-ignore;
 import { JobList } from '@/components/JobList';
@@ -15,6 +13,8 @@ import { JobList } from '@/components/JobList';
 import { CandidateMatches } from '@/components/CandidateMatches';
 // @ts-ignore;
 import { cachedCallDataSource, debounce } from '@/lib/cache';
+// @ts-ignore;
+import { RecruiterAIChat } from '@/components/RecruiterAIChat';
 export default function RecruiterDashboard(props) {
   const [recruiterData, setRecruiterData] = useState(null);
   const [jobs, setJobs] = useState([]);
@@ -153,7 +153,6 @@ export default function RecruiterDashboard(props) {
 
   // 更新缓存统计
   const updateCacheStats = () => {
-    // 这里可以集成实际的缓存监控
     setCacheStats(prev => ({
       ...prev,
       totalRequests: prev.totalRequests + 1
