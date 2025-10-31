@@ -1,54 +1,42 @@
 // @ts-ignore;
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 // @ts-ignore;
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Progress, useToast, CardDescription } from '@/components/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, Progress, Badge, Alert, AlertDescription, AlertTitle, useToast } from '@/components/ui';
 // @ts-ignore;
-import { Play, Pause, Square, MessageSquare, Clock, CheckCircle, AlertCircle, Mic, MicOff } from 'lucide-react';
+import { Play, Pause, Square, RotateCcw, MessageSquare, CheckCircle, AlertCircle, Clock, Eye, EyeOff } from 'lucide-react';
 
 // @ts-ignore;
-import { CandidateAIChat } from '@/components/CandidateAIChat';
+import { InterviewSetup } from '@/components/InterviewSetup';
+// @ts-ignore;
+import { InterviewProgress } from '@/components/InterviewProgress';
+// @ts-ignore;
+import { InterviewResults } from '@/components/InterviewResults';
+// @ts-ignore;
+import { ChatInterface } from '@/components/ChatInterface';
+// @ts-ignore;
+import { cachedCallDataSource } from '@/lib/cache';
 export default function CandidateAIInterview(props) {
-  const [currentStage, setCurrentStage] = useState('setup'); // setup, interview, results
+  const [interviewState, setInterviewState] = useState('setup'); // setup, in-progress, completed
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(120);
-  const [aiChatOpen, setAiChatOpen] = useState(false);
-  const [interviewData, setInterviewData] = useState(null);
-  const [recordingPermission, setRecordingPermission] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const questions = [{
-    id: 1,
-    question: '请介绍一下您在上一个项目中的主要职责和成就。',
-    category: '项目经验',
-    timeLimit: 120,
-    keywords: ['项目', '职责', '成就', '结果']
-  }, {
-    id: 2,
-    question: '描述一次您解决技术难题的经历，以及您是如何找到解决方案的。',
-    category: '问题解决',
-    timeLimit: 120,
-    keywords: ['技术难题', '解决方案', '思考过程', '结果']
-  }, {
-    id: 3,
-    question: '您如何保持对新技术的学习和跟进？请举例说明。',
-    category: '学习能力',
-    timeLimit: 120,
-    keywords: ['学习', '新技术', '跟进', '实践']
-  }, {
-    id: 4,
-    question: '在团队合作中，您通常扮演什么角色？请分享一个具体的例子。',
-    category: '团队协作',
-    timeLimit: 120,
-    keywords: ['团队合作', '角色', '协作', '贡献']
-  }, {
-    id: 5,
-    question: '您对我们公司的这个职位有什么了解？为什么认为自己适合这个职位？',
-    category: '职位匹配',
-    timeLimit: 120,
-    keywords: ['公司了解', '职位匹配', '适合原因', '期望']
-  }];
+  const [interviewResults, setInterviewResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [candidateProfile, setCandidateProfile] = useState(null);
+  const [resumeData, setResumeData] = useState(null);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [interviewConfig, setInterviewConfig] = useState({
+    duration: 30,
+    questionCount: 5,
+    difficulty: 'medium',
+    jobType: 'frontend',
+    includeTechnical: true,
+    includeBehavioral: true
+  });
   const {
     toast
   } = useToast();
@@ -56,142 +44,287 @@ export default function CandidateAIInterview(props) {
     $w
   } = props;
 
-  // 初始化面试
-  const startInterview = async (jobId, candidateId) => {
-    try {
-      // 检查麦克风权限
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true
+  // 获取候选人信息和简历数据
+  useEffect(() => {
+    const fetchCandidateData = async () => {
+      try {
+        const userId = props.$w.auth.currentUser?.userId;
+        if (!userId) {
+          $w.utils.navigateTo({
+            pageId: 'candidate-login'
+          });
+          return;
+        }
+
+        // 获取候选人资料
+        const profileResponse = await cachedCallDataSource($w, {
+          dataSourceName: 'candidate_profile',
+          methodName: 'wedaGetRecordsV2',
+          params: {
+            filter: {
+              where: {
+                userId: {
+                  $eq: userId
+                }
+              }
+            },
+            select: {
+              $master: true
+            }
+          }
         });
-        stream.getTracks().forEach(track => track.stop());
-        setRecordingPermission(true);
+        if (profileResponse.records && profileResponse.records.length > 0) {
+          setCandidateProfile(profileResponse.records[0]);
+          setResumeData(profileResponse.records[0].resumeAnalysis || null);
+        }
+
+        // 从URL参数获取简历数据
+        const urlParams = new URLSearchParams(window.location.search);
+        const resumeDataParam = urlParams.get('resumeData');
+        if (resumeDataParam) {
+          try {
+            setResumeData(JSON.parse(decodeURIComponent(resumeDataParam)));
+          } catch (e) {
+            console.error('解析简历数据失败:', e);
+          }
+        }
+      } catch (error) {
+        console.error('获取候选人数据失败:', error);
+        toast({
+          title: '获取数据失败',
+          description: '无法加载候选人信息',
+          variant: 'destructive'
+        });
       }
-      setInterviewData({
-        jobId,
-        candidateId,
-        startTime: new Date().toISOString(),
-        questions: questions
-      });
-      setCurrentStage('interview');
-      setTimeLeft(questions[0].timeLimit);
+    };
+    fetchCandidateData();
+  }, []);
+
+  // 生成面试问题
+  const generateQuestions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const baseQuestions = {
+        frontend: [{
+          id: 1,
+          type: 'technical',
+          question: '请解释React中的虚拟DOM是如何工作的？',
+          expectedAnswer: '虚拟DOM是React的核心概念，它是一个轻量级的JavaScript对象，是真实DOM的抽象表示...',
+          timeLimit: 180
+        }, {
+          id: 2,
+          type: 'technical',
+          question: '如何处理React中的状态管理？请比较Redux和Context API的优缺点。',
+          expectedAnswer: '状态管理可以通过多种方式实现：1) useState和useReducer用于组件级状态...',
+          timeLimit: 240
+        }, {
+          id: 3,
+          type: 'behavioral',
+          question: '描述一次你解决复杂技术问题的经历。',
+          expectedAnswer: '好的回答应该包括：问题背景、分析过程、解决方案、结果和学习...',
+          timeLimit: 300
+        }],
+        backend: [{
+          id: 1,
+          type: 'technical',
+          question: '解释RESTful API和GraphQL的区别。',
+          expectedAnswer: 'RESTful API是基于资源的架构风格，使用HTTP方法进行操作...',
+          timeLimit: 180
+        }],
+        fullstack: [{
+          id: 1,
+          type: 'technical',
+          question: '如何设计一个高并发的Web应用架构？',
+          expectedAnswer: '高并发架构设计需要考虑：负载均衡、缓存策略、数据库优化...',
+          timeLimit: 300
+        }]
+      };
+
+      // 根据配置生成问题
+      const jobQuestions = baseQuestions[interviewConfig.jobType] || baseQuestions.frontend;
+      const selectedQuestions = jobQuestions.slice(0, interviewConfig.questionCount);
+
+      // 根据简历数据个性化问题
+      if (resumeData && resumeData.skills) {
+        const personalizedQuestions = selectedQuestions.map(q => {
+          if (q.type === 'technical' && resumeData.skills.includes('React')) {
+            return {
+              ...q,
+              question: q.question.includes('React') ? q.question : `${q.question} (基于您的React经验)`
+            };
+          }
+          return q;
+        });
+        setQuestions(personalizedQuestions);
+      } else {
+        setQuestions(selectedQuestions);
+      }
+    } catch (error) {
+      console.error('生成问题失败:', error);
+      setError('无法生成面试问题，请重试');
+    } finally {
+      setLoading(false);
+    }
+  }, [interviewConfig, resumeData]);
+
+  // 开始面试
+  const startInterview = async () => {
+    setLoading(true);
+    try {
+      await generateQuestions();
+      setInterviewState('in-progress');
+      setCurrentQuestion(0);
+      setAnswers([]);
+      setTimeLeft(questions[0]?.timeLimit || 180);
+
+      // 记录面试开始
+      await saveInterviewStart();
       toast({
         title: '面试开始',
-        description: '请放松，按顺序回答问题。每个问题限时2分钟。'
+        description: 'AI面试已启动，请准备好回答问题',
+        variant: 'success'
       });
     } catch (error) {
+      console.error('开始面试失败:', error);
       toast({
-        title: '权限错误',
-        description: '需要麦克风权限才能进行录音面试',
+        title: '开始失败',
+        description: '无法启动面试，请重试',
         variant: 'destructive'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 录音控制
-  const toggleRecording = () => {
-    if (!recordingPermission) {
-      toast({
-        title: '权限错误',
-        description: '请先允许麦克风访问',
-        variant: 'destructive'
-      });
-      return;
-    }
-    setIsRecording(!isRecording);
-    if (!isRecording) {
-      // 模拟开始录音
-      toast({
-        title: '开始录音',
-        description: '正在录音中...请清晰回答问题'
-      });
-    } else {
-      // 模拟停止录音
-      toast({
-        title: '录音暂停',
-        description: '已暂停录音'
-      });
-    }
-  };
-
-  // 保存回答
-  const saveAnswer = async (questionId, answerText, duration) => {
-    const newAnswer = {
-      questionId,
-      answerText,
-      duration,
-      timestamp: new Date().toISOString(),
-      keywords: extractKeywords(answerText),
-      sentiment: analyzeSentiment(answerText),
-      confidence: calculateConfidence(answerText)
-    };
-    setAnswers(prev => [...prev, newAnswer]);
-
-    // 保存到数据库
+  // 保存面试开始记录
+  const saveInterviewStart = async () => {
     try {
-      await $w.cloud.callDataSource({
-        dataSourceName: 'application',
-        methodName: 'wedaCreateV2',
+      const userId = props.$w.auth.currentUser?.userId;
+      if (!userId) return;
+      await cachedCallDataSource($w, {
+        dataSourceName: 'candidate_profile',
+        methodName: 'wedaUpdateV2',
         params: {
           data: {
-            candidateId: interviewData?.candidateId || 'candidate_demo',
-            jobId: interviewData?.jobId || 'job_demo',
-            questionId,
-            answer: newAnswer,
-            status: 'interview_in_progress',
-            createdAt: new Date().toISOString()
+            lastInterviewDate: new Date().toISOString(),
+            interviewConfig: interviewConfig
+          },
+          filter: {
+            where: {
+              userId: {
+                $eq: userId
+              }
+            }
           }
         }
       });
     } catch (error) {
-      console.error('保存回答失败:', error);
+      console.error('保存面试记录失败:', error);
     }
   };
 
-  // 文本分析函数
-  const extractKeywords = text => {
-    const keywords = [];
-    questions[currentQuestion]?.keywords?.forEach(keyword => {
-      if (text.toLowerCase().includes(keyword.toLowerCase())) {
-        keywords.push(keyword);
-      }
-    });
-    return keywords;
+  // 处理答案
+  const handleAnswer = async answer => {
+    const newAnswers = [...answers, {
+      questionId: questions[currentQuestion].id,
+      question: questions[currentQuestion].question,
+      answer,
+      timestamp: new Date().toISOString()
+    }];
+    setAnswers(newAnswers);
+
+    // 保存答案
+    await saveAnswer(questions[currentQuestion].id, answer);
+
+    // 分析答案
+    await analyzeAnswer(answer, questions[currentQuestion]);
   };
-  const analyzeSentiment = text => {
-    // 简单的情感分析
-    const positiveWords = ['优秀', '成功', '满意', '喜欢', '擅长', '经验'];
-    const negativeWords = ['困难', '问题', '挑战', '失败', '不足'];
-    let score = 0;
-    positiveWords.forEach(word => {
-      if (text.includes(word)) score += 1;
-    });
-    negativeWords.forEach(word => {
-      if (text.includes(word)) score -= 1;
-    });
-    if (score > 0) return 'positive';
-    if (score < 0) return 'negative';
-    return 'neutral';
+
+  // 保存答案
+  const saveAnswer = async (questionId, answer) => {
+    try {
+      const userId = props.$w.auth.currentUser?.userId;
+      if (!userId) return;
+      await cachedCallDataSource($w, {
+        dataSourceName: 'candidate_profile',
+        methodName: 'wedaUpdateV2',
+        params: {
+          data: {
+            interviewAnswers: {
+              questionId,
+              answer,
+              timestamp: new Date().toISOString()
+            }
+          },
+          filter: {
+            where: {
+              userId: {
+                $eq: userId
+              }
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('保存答案失败:', error);
+    }
   };
-  const calculateConfidence = text => {
-    const wordCount = text.split(' ').length;
-    const minWords = 20;
-    const maxWords = 100;
-    if (wordCount < minWords) return Math.round(wordCount / minWords * 50);
-    if (wordCount > maxWords) return 100;
-    return Math.round(50 + (wordCount - minWords) / (maxWords - minWords) * 50);
+
+  // 分析答案
+  const analyzeAnswer = async (answer, question) => {
+    try {
+      // 模拟AI分析
+      const analysis = {
+        score: Math.floor(Math.random() * 40) + 60,
+        // 60-100分
+        strengths: ['回答清晰', '技术理解深入', '举例恰当'],
+        improvements: ['可以增加更多细节', '考虑实际应用场景'],
+        keywords: ['React', '组件', '状态管理', '性能优化']
+      };
+
+      // 保存分析结果
+      await saveAnalysis(question.id, analysis);
+      return analysis;
+    } catch (error) {
+      console.error('分析答案失败:', error);
+    }
+  };
+
+  // 保存分析结果
+  const saveAnalysis = async (questionId, analysis) => {
+    try {
+      const userId = props.$w.auth.currentUser?.userId;
+      if (!userId) return;
+      await cachedCallDataSource($w, {
+        dataSourceName: 'candidate_profile',
+        methodName: 'wedaUpdateV2',
+        params: {
+          data: {
+            interviewAnalysis: {
+              questionId,
+              ...analysis,
+              timestamp: new Date().toISOString()
+            }
+          },
+          filter: {
+            where: {
+              userId: {
+                $eq: userId
+              }
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('保存分析结果失败:', error);
+    }
   };
 
   // 下一个问题
   const nextQuestion = async () => {
     if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
+      setCurrentQuestion(currentQuestion + 1);
       setTimeLeft(questions[currentQuestion + 1].timeLimit);
-      setTranscript('');
-
-      // 模拟保存当前回答
-      const mockAnswer = `这是第${currentQuestion + 1}个问题的回答示例，包含了相关的关键词和经验分享。`;
-      await saveAnswer(questions[currentQuestion].id, mockAnswer, 120 - timeLeft);
     } else {
       await completeInterview();
     }
@@ -199,336 +332,166 @@ export default function CandidateAIInterview(props) {
 
   // 完成面试
   const completeInterview = async () => {
-    const finalAnswer = `这是最后一个问题的回答示例，展示了对公司和职位的深入了解。`;
-    await saveAnswer(questions[currentQuestion].id, finalAnswer, 120 - timeLeft);
-
-    // 计算总分
-    const totalScore = Math.round(answers.reduce((sum, answer) => sum + answer.confidence, 0) / questions.length);
-
-    // 保存完整面试结果
+    setLoading(true);
     try {
-      await $w.cloud.callDataSource({
-        dataSourceName: 'application',
-        methodName: 'wedaCreateV2',
+      // 生成面试结果
+      const results = {
+        totalScore: Math.floor(Math.random() * 20) + 80,
+        // 80-100分
+        overallFeedback: '表现优秀，技术基础扎实，沟通能力强',
+        recommendations: ['加强算法练习', '关注系统设计', '准备更多项目案例'],
+        strengths: ['React开发经验丰富', '问题解决能力强', '团队协作良好'],
+        areasForImprovement: ['深入理解底层原理', '提升代码质量', '加强测试覆盖']
+      };
+      setInterviewResults(results);
+      setInterviewState('completed');
+
+      // 保存面试结果
+      await saveInterviewResults(results);
+      toast({
+        title: '面试完成',
+        description: '恭喜您完成AI面试！',
+        variant: 'success'
+      });
+    } catch (error) {
+      console.error('完成面试失败:', error);
+      toast({
+        title: '完成失败',
+        description: '无法保存面试结果',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 保存面试结果
+  const saveInterviewResults = async results => {
+    try {
+      const userId = props.$w.auth.currentUser?.userId;
+      if (!userId) return;
+      await cachedCallDataSource($w, {
+        dataSourceName: 'candidate_profile',
+        methodName: 'wedaUpdateV2',
         params: {
           data: {
-            candidateId: interviewData?.candidateId || 'candidate_demo',
-            jobId: interviewData?.jobId || 'job_demo',
-            interviewAnswers: [...answers, {
-              questionId: questions[currentQuestion].id,
-              answerText: finalAnswer,
-              duration: 120 - timeLeft,
-              timestamp: new Date().toISOString()
-            }],
-            totalScore,
-            status: 'interview_completed',
-            completedAt: new Date().toISOString(),
-            createdAt: new Date().toISOString()
+            interviewResults: results,
+            interviewCompleted: true,
+            interviewCompletionDate: new Date().toISOString()
+          },
+          filter: {
+            where: {
+              userId: {
+                $eq: userId
+              }
+            }
           }
         }
       });
     } catch (error) {
       console.error('保存面试结果失败:', error);
     }
-    setInterviewData(prev => ({
-      ...prev,
-      totalScore,
-      completedAt: new Date().toISOString()
-    }));
-    setCurrentStage('results');
   };
 
-  // 格式化时间
-  const formatTime = seconds => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // 重新开始面试
+  const restartInterview = () => {
+    setInterviewState('setup');
+    setCurrentQuestion(0);
+    setAnswers([]);
+    setInterviewResults(null);
   };
 
-  // 获取进度颜色
-  const getProgressColor = () => {
-    const percentage = (currentQuestion + 1) / questions.length * 100;
-    if (percentage >= 80) return 'bg-green-500';
-    if (percentage >= 50) return 'bg-blue-500';
-    return 'bg-yellow-500';
+  // 处理AI聊天
+  const handleChatMessage = async message => {
+    const newMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: message,
+      timestamp: new Date().toISOString()
+    };
+    setChatMessages(prev => [...prev, newMessage]);
+
+    // AI回复
+    setTimeout(() => {
+      const aiResponse = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: getAIResponse(message),
+        timestamp: new Date().toISOString()
+      };
+      setChatMessages(prev => [...prev, aiResponse]);
+    }, 1000);
   };
 
-  // 倒计时
-  useEffect(() => {
-    let timer;
-    if (currentStage === 'interview' && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && currentStage === 'interview') {
-      nextQuestion();
-    }
-    return () => clearInterval(timer);
-  }, [currentStage, timeLeft]);
+  // 获取AI回复
+  const getAIResponse = message => {
+    const responses = {
+      'help': '我可以帮您：1) 解释面试问题 2) 提供答题建议 3) 分析您的回答 4) 给出改进建议',
+      'question': `当前问题是：${questions[currentQuestion]?.question || '暂无问题'}`,
+      'tips': '回答技巧：1) 结构化回答 2) 提供具体例子 3) 展示思考过程 4) 保持简洁清晰',
+      'feedback': '您的回答很有条理，建议可以增加更多实际项目经验'
+    };
+    return responses[message.toLowerCase()] || '我理解您的问题，让我为您提供一些建议...';
+  };
 
-  // 渲染不同阶段
-  if (currentStage === 'setup') {
-    return <div className="min-h-screen bg-gray-50 py-8">
-        <style jsx>{`
-          body {
-            background: #f9fafb;
-          }
-        `}</style>
-        
-        <div className="max-w-4xl mx-auto px-4">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>AI面试准备</CardTitle>
-              <CardDescription>
-                准备好开始您的AI面试之旅
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-blue-50 p-6 rounded-lg">
-                <h3 className="font-semibold mb-2">面试流程</h3>
-                <ul className="space-y-2 text-sm">
-                  <li>• 5个结构化问题，每个限时2分钟</li>
-                  <li>• 支持语音录音和文字输入</li>
-                  <li>• 实时AI分析和反馈</li>
-                  <li>• 面试结果自动保存</li>
-                </ul>
-              </div>
-              
-              <div className="bg-yellow-50 p-6 rounded-lg">
-                <h3 className="font-semibold mb-2">注意事项</h3>
-                <ul className="space-y-2 text-sm">
-                  <li>• 请确保网络连接稳定</li>
-                  <li>• 使用耳机可获得更好的录音效果</li>
-                  <li>• 每个问题有2分钟回答时间</li>
-                  <li>• 面试过程中可随时暂停</li>
-                </ul>
-              </div>
-              
-              <Button onClick={() => startInterview('job_demo', 'candidate_demo')} className="w-full">
-                <Play className="h-4 w-4 mr-2" />
-                开始面试
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>;
-  }
-  if (currentStage === 'results') {
-    return <div className="min-h-screen bg-gray-50 py-8">
-        <style jsx>{`
-          body {
-            background: #f9fafb;
-          }
-        `}</style>
-        
-        <div className="max-w-4xl mx-auto px-4">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <CheckCircle className="h-6 w-6 text-green-500 mr-2" />
-                面试完成！
-              </CardTitle>
-              <CardDescription>
-                您的AI面试已顺利完成，以下是详细分析
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-blue-600 mb-2">
-                  {Math.round(answers.reduce((sum, answer) => sum + answer.confidence, 0) / questions.length) || 85}%
-                </div>
-                <p className="text-gray-600">综合评分</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{answers.length}</div>
-                  <p className="text-sm text-gray-600">已回答问题</p>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {Math.round(answers.reduce((sum, answer) => sum + answer.keywords.length, 0) / answers.length) || 3}
-                  </div>
-                  <p className="text-sm text-gray-600">平均关键词</p>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {Math.round(answers.reduce((sum, answer) => sum + answer.duration, 0) / answers.length) || 90}s
-                  </div>
-                  <p className="text-sm text-gray-600">平均回答时长</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="font-semibold">详细分析</h3>
-                {answers.map((answer, index) => <div key={index} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium">问题 {index + 1}</span>
-                      <Badge variant={answer.sentiment === 'positive' ? 'default' : answer.sentiment === 'negative' ? 'destructive' : 'secondary'}>
-                        {answer.sentiment}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      关键词匹配：{answer.keywords.join(', ') || '无'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      回答时长：{answer.duration}秒 | 置信度：{answer.confidence}%
-                    </p>
-                  </div>)}
-              </div>
-              
-              <div className="flex space-x-4">
-                <Button onClick={() => $w.utils.navigateTo({
-                pageId: 'candidate-dashboard'
-              })} className="flex-1">
-                  返回仪表板
-                </Button>
-                <Button variant="outline" onClick={() => setCurrentStage('setup')} className="flex-1">
-                  重新面试
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>;
-  }
+  // 渲染面试设置
+  const renderInterviewSetup = () => <Card className="max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>AI面试设置</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <InterviewSetup config={interviewConfig} onConfigChange={setInterviewConfig} onStart={startInterview} loading={loading} resumeData={resumeData} />
+      </CardContent>
+    </Card>;
 
-  // 面试进行中界面
-  return <div className="min-h-screen bg-gray-50 py-8">
+  // 渲染面试进行中
+  const renderInterviewProgress = () => <div className="max-w-4xl mx-auto">
+      <InterviewProgress currentQuestion={currentQuestion} totalQuestions={questions.length} question={questions[currentQuestion]} timeLeft={timeLeft} isRecording={isRecording} onAnswer={handleAnswer} onNext={nextQuestion} loading={loading} />
+    </div>;
+
+  // 渲染面试结果
+  const renderInterviewResults = () => <div className="max-w-4xl mx-auto">
+      <InterviewResults results={interviewResults} answers={answers} onRestart={restartInterview} onNavigate={() => $w.utils.navigateTo({
+      pageId: 'candidate-dashboard'
+    })} />
+    </div>;
+  return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <style jsx>{`
         body {
-          background: #f9fafb;
+          background: linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #faf5ff 100%);
+        }
+        .dark body {
+          background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #374151 100%);
         }
       `}</style>
       
-      <div className="max-w-4xl mx-auto px-4">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>AI面试进行中</CardTitle>
-                <CardDescription>
-                  问题 {currentQuestion + 1} / {questions.length}
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="text-lg">
-                <Clock className="h-4 w-4 mr-1" />
-                {formatTime(timeLeft)}
-              </Badge>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            {/* 进度条 */}
-            <div className="space-y-2">
-              <Progress value={(currentQuestion + 1) / questions.length * 100} className={`h-3 ${getProgressColor()}`} />
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>进度: {currentQuestion + 1}/{questions.length}</span>
-                <span>{Math.round((currentQuestion + 1) / questions.length * 100)}%</span>
-              </div>
-            </div>
+      <div className="max-w-6xl mx-auto p-6">
+        {/* 页面标题 */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            AI智能面试
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            通过AI技术进行专业面试评估
+          </p>
+        </div>
 
-            {/* 问题卡片 */}
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <div className="flex items-center space-x-2 mb-3">
-                <Badge variant="secondary">{questions[currentQuestion].category}</Badge>
-                <span className="text-sm text-gray-600">限时2分钟</span>
-              </div>
-              <h3 className="text-lg font-medium leading-relaxed">
-                {questions[currentQuestion].question}
-              </h3>
-            </div>
+        {/* 主要内容 */}
+        {interviewState === 'setup' && renderInterviewSetup()}
+        {interviewState === 'in-progress' && renderInterviewProgress()}
+        {interviewState === 'completed' && renderInterviewResults()}
 
-            {/* 关键词提示 */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">回答建议包含：</p>
-              <div className="flex flex-wrap gap-1">
-                {questions[currentQuestion].keywords.map(keyword => <Badge key={keyword} variant="outline" className="text-xs">
-                    {keyword}
-                  </Badge>)}
-              </div>
-            </div>
+        {/* AI聊天助手 */}
+        <div className="fixed bottom-6 right-6">
+          <Button className="rounded-full h-14 w-14 shadow-lg bg-blue-500 hover:bg-blue-600" onClick={() => setShowChat(!showChat)}>
+            <MessageSquare className="h-6 w-6" />
+          </Button>
+        </div>
 
-            {/* 录音控制 */}
-            <div className="flex justify-center space-x-4">
-              <Button variant="outline" size="lg" onClick={toggleRecording} className={`${isRecording ? 'bg-red-500 text-white hover:bg-red-600' : ''}`}>
-                {isRecording ? <MicOff className="h-5 w-5 mr-2" /> : <Mic className="h-5 w-5 mr-2" />}
-                {isRecording ? '暂停录音' : '开始录音'}
-              </Button>
-              
-              <Button size="lg" onClick={nextQuestion} disabled={isRecording}>
-                {currentQuestion < questions.length - 1 ? '下一题' : '完成面试'}
-              </Button>
-            </div>
-
-            {/* 录音状态 */}
-            {isRecording && <div className="text-center">
-                <div className="inline-flex items-center space-x-2 text-red-500">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                  <span>正在录音...</span>
-                </div>
-              </div>}
-
-            {/* 当前回答预览 */}
-            {transcript && <div className="border-t pt-4">
-                <h4 className="font-medium mb-2">当前回答：</h4>
-                <p className="text-sm text-gray-600">{transcript}</p>
-              </div>}
-
-            {/* 已回答问题 */}
-            {answers.length > 0 && <div className="border-t pt-4">
-                <h4 className="font-medium mb-2">已回答的问题：</h4>
-                <div className="space-y-2">
-                  {answers.map((answer, index) => <div key={index} className="text-sm text-gray-600">
-                      <span className="font-medium">问题{index + 1}：</span> 
-                      {answer.answerText.substring(0, 50)}...
-                    </div>)}
-                </div>
-              </div>}
-          </CardContent>
-        </Card>
+        {/* 聊天界面 */}
+        {showChat && <div className="fixed bottom-20 right-6 w-80 h-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border">
+            <ChatInterface messages={chatMessages} onSendMessage={handleChatMessage} placeholder="询问面试相关问题..." title="AI面试助手" onClose={() => setShowChat(false)} />
+          </div>}
       </div>
-
-      {/* AI客服按钮 */}
-      <Button className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg bg-blue-500 hover:bg-blue-600" onClick={() => setAiChatOpen(true)}>
-        <MessageSquare className="h-6 w-6" />
-      </Button>
-
-      {/* AI客服抽屉 */}
-      <CandidateAIChat isOpen={aiChatOpen} onClose={() => setAiChatOpen(false)} userId="candidate_interview_user" userName="面试候选人" onMessageSent={async (userMsg, botMsg) => {
-      console.log('面试页面AI对话:', {
-        user: userMsg,
-        bot: botMsg
-      });
-
-      // 保存面试相关的AI对话
-      try {
-        await $w.cloud.callDataSource({
-          dataSourceName: 'chat_message',
-          methodName: 'wedaCreateV2',
-          params: {
-            data: {
-              messageId: userMsg.id,
-              senderId: 'candidate_interview_user',
-              senderName: '面试候选人',
-              receiverId: 'ai_assistant',
-              receiverName: 'AI面试助手',
-              content: userMsg.content,
-              messageType: 'interview_support',
-              timestamp: userMsg.timestamp,
-              conversationId: 'interview_support',
-              platform: 'candidate_interview',
-              metadata: {
-                currentQuestion: currentQuestion + 1,
-                totalQuestions: questions.length,
-                stage: 'interview'
-              }
-            }
-          }
-        });
-      } catch (error) {
-        console.error('保存面试对话失败:', error);
-      }
-    }} />
     </div>;
 }
