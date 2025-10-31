@@ -30,3 +30,4 @@ export * from './AdminCharts.jsx';
 export * from './AdminDataTable.jsx';
 export * from './SystemHealthCard.jsx';
 export * from './RecruiterAIChat.jsx';
+export * from './CandidateAIChat.jsx';
