@@ -19,3 +19,5 @@ export * from './InterviewResults.jsx';
 export * from './RecruiterStats.jsx';
 export * from './CandidateList.jsx';
 export * from './ComplianceChart.jsx';
+export * from './CandidateCard.jsx';
+export * from './CandidateFilters.jsx';

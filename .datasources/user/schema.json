@@ -1,27 +1,47 @@
 
 {
   "name": "user",
-  "title": "用户基础信息",
-  "schemas": [
+  "fields": [
     {
       "name": "userId",
-      "title": "用户ID",
-      "type": "String"
+      "type": "string",
+      "required": true,
+      "primary": true
     },
     {
-      "name": "role",
-      "title": "用户角色",
-      "type": "String"
+      "name": "name",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "nickName",
+      "type": "string"
     },
     {
       "name": "email",
-      "title": "邮箱地址",
-      "type": "Email"
+      "type": "string",
+      "required": true
     },
     {
       "name": "phone",
-      "title": "手机号码",
-      "type": "String"
+      "type": "string"
+    },
+    {
+      "name": "avatarUrl",
+      "type": "string"
+    },
+    {
+      "name": "role",
+      "type": "string",
+      "enum": ["candidate", "recruiter", "admin"]
+    },
+    {
+      "name": "createdAt",
+      "type": "datetime"
+    },
+    {
+      "name": "updatedAt",
+      "type": "datetime"
     }
   ]
 }

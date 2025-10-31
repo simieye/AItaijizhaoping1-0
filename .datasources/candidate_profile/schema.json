@@ -1,67 +1,75 @@
 
 {
   "name": "candidate_profile",
-  "title": "求职者档案",
-  "schemas": [
+  "fields": [
     {
       "name": "userId",
-      "title": "用户ID",
-      "type": "String"
+      "type": "string",
+      "required": true
     },
     {
       "name": "fullName",
-      "title": "姓名",
-      "type": "String"
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "phone",
+      "type": "string"
     },
     {
       "name": "avatarUrl",
-      "title": "头像URL",
-      "type": "Image"
+      "type": "string"
     },
     {
-      "name": "resumeUrl",
-      "title": "简历文件",
-      "type": "Array",
-      "items": {
-        "type": "File"
-      }
+      "name": "targetPosition",
+      "type": "string"
     },
     {
-      "name": "videoIntroUrl",
-      "title": "视频介绍",
-      "type": "Media",
-      "format": "x-video"
+      "name": "experience",
+      "type": "number"
     },
     {
       "name": "skills",
-      "title": "技能标签",
-      "type": "Array",
-      "items": {
-        "type": "String"
-      }
-    },
-    {
-      "name": "experienceYears",
-      "title": "工作经验年数",
-      "type": "Number"
-    },
-    {
-      "name": "preferredSalary",
-      "title": "期望薪资",
-      "type": "String"
+      "type": "array",
+      "itemType": "string"
     },
     {
       "name": "location",
-      "title": "工作地点",
-      "type": "String"
+      "type": "string"
     },
     {
-      "name": "languages",
-      "title": "掌握语言",
-      "type": "Array",
-      "items": {
-        "type": "String"
-      }
+      "name": "expectedSalary",
+      "type": "string"
+    },
+    {
+      "name": "resumeUrl",
+      "type": "string"
+    },
+    {
+      "name": "matchScore",
+      "type": "number"
+    },
+    {
+      "name": "diversityScore",
+      "type": "number"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "enum": ["active", "screening", "interview", "hired", "rejected"]
+    },
+    {
+      "name": "createdAt",
+      "type": "datetime"
+    },
+    {
+      "name": "updatedAt",
+      "type": "datetime"
     }
   ]
 }

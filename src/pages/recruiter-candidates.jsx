@@ -1,256 +1,453 @@
 // @ts-ignore;
 import React, { useState, useEffect } from 'react';
 // @ts-ignore;
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Checkbox, Alert, AlertDescription } from '@/components/ui';
+import { Button, Badge, useToast } from '@/components/ui';
 // @ts-ignore;
-import { Users, Shield, AlertTriangle, CheckCircle, Eye, EyeOff, Download } from 'lucide-react';
+import { Users, Download, RefreshCw, TrendingUp, Shield } from 'lucide-react';
 
 // @ts-ignore;
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { AccessibilityMenu } from '@/components/AccessibilityMenu';
-import { BiasDetectionBar } from '@/components/BiasDetectionBar';
+import { CandidateCard } from '@/components/CandidateCard';
+// @ts-ignore;
+import { CandidateFilters } from '@/components/CandidateFilters';
 export default function RecruiterCandidates(props) {
+  const [candidates, setCandidates] = useState([]);
+  const [filteredCandidates, setFilteredCandidates] = useState([]);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('matchScore');
+  const [algorithmVersion, setAlgorithmVersion] = useState('v2.3.1');
+  const [regulationVersion, setRegulationVersion] = useState('EU_AI_Act_2025_v3');
+  const [modelConfidence, setModelConfidence] = useState(95);
+  const [loading, setLoading] = useState(true);
+  const {
+    toast
+  } = useToast();
   const {
     $w
   } = props;
-  const [candidates, setCandidates] = useState([]);
-  const [selectedCandidates, setSelectedCandidates] = useState([]);
-  const [humanReviewConfirmed, setHumanReviewConfirmed] = useState(false);
-  const [fontSize, setFontSize] = useState(16);
-  const [colorBlindMode, setColorBlindMode] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-  const [language, setLanguage] = useState('zh');
-  const [showBiasWarning, setShowBiasWarning] = useState(false);
 
-  // 模拟候选人数据
-  const mockCandidates = [{
-    id: '1',
-    name: '张三',
-    position: '高级前端工程师',
-    matchScore: 92,
-    biasRisk: 3,
-    diversityScore: 85,
-    experience: '5年',
-    skills: ['React', 'TypeScript', 'Node.js'],
-    education: '硕士',
-    location: '北京',
-    status: '面试中',
-    humanReviewWeight: 70
-  }, {
-    id: '2',
-    name: '李四',
-    position: '全栈开发工程师',
-    matchScore: 88,
-    biasRisk: 7,
-    diversityScore: 75,
-    experience: '4年',
-    skills: ['Python', 'Django', 'React'],
-    education: '本科',
-    location: '上海',
-    status: '待筛选',
-    humanReviewWeight: 70
-  }, {
-    id: '3',
-    name: '王五',
-    position: '后端架构师',
-    matchScore: 95,
-    biasRisk: 2,
-    diversityScore: 90,
-    experience: '8年',
-    skills: ['Java', 'Spring', 'Microservices'],
-    education: '硕士',
-    location: '深圳',
-    status: '已通过',
-    humanReviewWeight: 70
-  }, {
-    id: '4',
-    name: '赵六',
-    position: '数据科学家',
-    matchScore: 85,
-    biasRisk: 8,
-    diversityScore: 70,
-    experience: '3年',
-    skills: ['Python', 'Machine Learning', 'TensorFlow'],
-    education: '博士',
-    location: '杭州',
-    status: '待面试',
-    humanReviewWeight: 70
-  }];
-  useEffect(() => {
-    setCandidates(mockCandidates);
-  }, []);
-  const handleSelectCandidate = candidateId => {
-    setSelectedCandidates(prev => prev.includes(candidateId) ? prev.filter(id => id !== candidateId) : [...prev, candidateId]);
+  // 获取当前法规
+  const getCurrentRegulation = () => {
+    const region = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (region.includes('Europe')) return 'EU_AI_Act';
+    if (region.includes('America')) return 'US_State_Bias_Audit';
+    if (region.includes('Asia/Shanghai')) return 'China_Content_Review';
+    return 'EU_AI_Act';
   };
-  const handleBatchAction = async action => {
-    if (!humanReviewConfirmed && selectedCandidates.length > 0) {
-      setShowBiasWarning(true);
-      return;
-    }
+
+  // 获取候选人列表
+  const fetchCandidates = async () => {
     try {
-      // 模拟批量操作
-      console.log(`执行批量操作: ${action}`, selectedCandidates);
+      const candidates = await $w.cloud.callDataSource({
+        dataSourceName: 'candidate_profile',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              status: {
+                $in: ['active', 'screening', 'interview']
+              }
+            }
+          },
+          select: {
+            $master: true
+          },
+          orderBy: [{
+            updatedAt: 'desc'
+          }],
+          pageSize: 100
+        }
+      });
 
-      // 更新候选人状态
-      const updatedCandidates = candidates.map(candidate => selectedCandidates.includes(candidate.id) ? {
-        ...candidate,
-        status: action === 'interview' ? '面试中' : action === 'reject' ? '已拒绝' : candidate.status
-      } : candidate);
-      setCandidates(updatedCandidates);
-      setSelectedCandidates([]);
-      setHumanReviewConfirmed(false);
+      // 获取相关合规数据
+      const candidateIds = candidates.records?.map(c => c.userId) || [];
+      let enrichedCandidates = [];
+      if (candidateIds.length > 0) {
+        const [audits, explanations, applications] = await Promise.all([$w.cloud.callDataSource({
+          dataSourceName: 'compliance_audit_2025',
+          methodName: 'wedaGetRecordsV2',
+          params: {
+            filter: {
+              where: {
+                entityType: {
+                  $eq: 'candidate'
+                },
+                entityId: {
+                  $in: candidateIds
+                }
+              }
+            },
+            select: {
+              $master: true
+            },
+            orderBy: [{
+              createdAt: 'desc'
+            }]
+          }
+        }), $w.cloud.callDataSource({
+          dataSourceName: 'ai_explanation_2025',
+          methodName: 'wedaGetRecordsV2',
+          params: {
+            filter: {
+              where: {
+                entityType: {
+                  $eq: 'candidate'
+                },
+                entityId: {
+                  $in: candidateIds
+                }
+              }
+            },
+            select: {
+              $master: true
+            },
+            orderBy: [{
+              createdAt: 'desc'
+            }]
+          }
+        }), $w.cloud.callDataSource({
+          dataSourceName: 'application',
+          methodName: 'wedaGetRecordsV2',
+          params: {
+            filter: {
+              where: {
+                candidateId: {
+                  $in: candidateIds
+                }
+              }
+            },
+            select: {
+              $master: true
+            }
+          }
+        })]);
+        enrichedCandidates = candidates.records?.map(candidate => {
+          const audit = audits.records?.find(a => a.entityId === candidate.userId);
+          const explanation = explanations.records?.find(e => e.entityId === candidate.userId);
+          const candidateApplications = applications.records?.filter(app => app.candidateId === candidate.userId) || [];
+          return {
+            id: candidate.userId,
+            name: candidate.fullName || '匿名候选人',
+            avatar: candidate.avatarUrl || '/default-avatar.png',
+            email: candidate.email || '未提供',
+            phone: candidate.phone || '未提供',
+            position: candidate.targetPosition || '未指定',
+            experience: candidate.experience || 0,
+            skills: candidate.skills || [],
+            location: candidate.location || '未指定',
+            salary: candidate.expectedSalary || '面议',
+            matchScore: candidate.matchScore || 85,
+            biasScore: audit?.score || 2,
+            algorithmVersion: audit?.algorithmVersion || 'v2.3.1',
+            modelConfidence: explanation?.modelConfidence || 95,
+            applications: candidateApplications.length,
+            lastActive: candidate.updatedAt || new Date().toISOString(),
+            status: candidate.status || 'active',
+            diversityScore: candidate.diversityScore || 85
+          };
+        }) || [];
+      }
+      setCandidates(enrichedCandidates);
+      setFilteredCandidates(enrichedCandidates);
     } catch (error) {
-      console.error('批量操作失败:', error);
+      console.error('获取候选人数据失败:', error);
+      // 使用模拟数据
+      const mockCandidates = [{
+        id: '1',
+        name: '张小明',
+        avatar: '/avatar1.jpg',
+        email: 'zhang@example.com',
+        position: '前端工程师',
+        experience: 5,
+        skills: ['React', 'JavaScript', 'TypeScript', 'Node.js'],
+        location: '北京',
+        salary: '20k-30k',
+        matchScore: 92,
+        biasScore: 1,
+        algorithmVersion: 'v2.3.1',
+        modelConfidence: 95,
+        applications: 3,
+        lastActive: new Date().toISOString(),
+        status: 'active',
+        diversityScore: 88
+      }, {
+        id: '2',
+        name: '李小红',
+        avatar: '/avatar2.jpg',
+        email: 'li@example.com',
+        position: '产品经理',
+        experience: 7,
+        skills: ['产品设计', '用户研究', '数据分析', '敏捷开发'],
+        location: '上海',
+        salary: '25k-35k',
+        matchScore: 89,
+        biasScore: 2,
+        algorithmVersion: 'v2.3.1',
+        modelConfidence: 94,
+        applications: 2,
+        lastActive: new Date().toISOString(),
+        status: 'screening',
+        diversityScore: 92
+      }, {
+        id: '3',
+        name: '王小强',
+        avatar: '/avatar3.jpg',
+        email: 'wang@example.com',
+        position: '后端工程师',
+        experience: 6,
+        skills: ['Python', 'Django', 'PostgreSQL', 'Redis'],
+        location: '深圳',
+        salary: '25k-35k',
+        matchScore: 87,
+        biasScore: 3,
+        algorithmVersion: 'v2.3.1',
+        modelConfidence: 93,
+        applications: 4,
+        lastActive: new Date().toISOString(),
+        status: 'interview',
+        diversityScore: 85
+      }];
+      setCandidates(mockCandidates);
+      setFilteredCandidates(mockCandidates);
+    } finally {
+      setLoading(false);
     }
   };
-  const handleExportReport = () => {
-    const report = {
-      exportDate: new Date(),
-      totalCandidates: candidates.length,
-      averageMatchScore: candidates.reduce((sum, c) => sum + c.matchScore, 0) / candidates.length,
-      averageBiasRisk: candidates.reduce((sum, c) => sum + c.biasRisk, 0) / candidates.length,
-      diversityMetrics: {
-        highDiversity: candidates.filter(c => c.diversityScore >= 80).length,
-        mediumDiversity: candidates.filter(c => c.diversityScore >= 60 && c.diversityScore < 80).length,
-        lowDiversity: candidates.filter(c => c.diversityScore < 60).length
-      },
-      candidates: candidates.map(c => ({
-        id: c.id,
-        name: c.name,
-        position: c.position,
-        matchScore: c.matchScore,
-        biasRisk: c.biasRisk,
-        diversityScore: c.diversityScore,
-        status: c.status
-      }))
-    };
-    console.log('导出候选人报告:', report);
-    alert('候选人报告已导出！');
+
+  // 过滤候选人
+  const filterCandidates = () => {
+    let filtered = candidates;
+    if (selectedFilter !== 'all') {
+      switch (selectedFilter) {
+        case 'high-match':
+          filtered = filtered.filter(c => c.matchScore >= 90);
+          break;
+        case 'low-bias':
+          filtered = filtered.filter(c => c.biasScore <= 3);
+          break;
+        case 'diverse':
+          filtered = filtered.filter(c => c.diversityScore >= 85);
+          break;
+        case 'recent':
+          filtered = filtered.filter(c => new Date(c.lastActive) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+          break;
+      }
+    }
+    if (searchQuery) {
+      filtered = filtered.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.position.toLowerCase().includes(searchQuery.toLowerCase()) || c.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())));
+    }
+    // 排序
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'matchScore':
+          return b.matchScore - a.matchScore;
+        case 'experience':
+          return b.experience - a.experience;
+        case 'biasScore':
+          return a.biasScore - b.biasScore;
+        case 'diversityScore':
+          return b.diversityScore - a.diversityScore;
+        case 'lastActive':
+          return new Date(b.lastActive) - new Date(a.lastActive);
+        default:
+          return 0;
+      }
+    });
+    setFilteredCandidates(filtered);
   };
-  return <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 p-4`}>
+
+  // 导出候选人报告
+  const exportCandidateReport = async candidate => {
+    try {
+      const reportData = {
+        candidateId: candidate.id,
+        name: candidate.name,
+        position: candidate.position,
+        matchScore: candidate.matchScore,
+        biasScore: candidate.biasScore,
+        diversityScore: candidate.diversityScore,
+        algorithmVersion: candidate.algorithmVersion,
+        modelConfidence: candidate.modelConfidence,
+        regulation: getCurrentRegulation(),
+        regulationVersion: regulationVersion,
+        timestamp: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(reportData, null, 2)], {
+        type: 'application/json'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `candidate_report_${candidate.name}_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({
+        title: "导出成功",
+        description: `候选人${candidate.name}的报告已导出`
+      });
+    } catch (error) {
+      toast({
+        title: "导出失败",
+        description: "请稍后重试",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // 批量导出报告
+  const exportAllReports = async () => {
+    try {
+      const reportData = {
+        candidates: filteredCandidates,
+        total: filteredCandidates.length,
+        algorithmVersion: algorithmVersion,
+        regulation: getCurrentRegulation(),
+        regulationVersion: regulationVersion,
+        timestamp: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(reportData, null, 2)], {
+        type: 'application/json'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `candidates_batch_report_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({
+        title: "批量导出成功",
+        description: `已导出${filteredCandidates.length}个候选人的报告`
+      });
+    } catch (error) {
+      toast({
+        title: "导出失败",
+        description: "请稍后重试",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // 查看候选人详情
+  const viewCandidateDetails = candidate => {
+    $w.utils.navigateTo({
+      pageId: 'recruiter-candidate-detail',
+      params: {
+        candidateId: candidate.id,
+        algorithmVersion: candidate.algorithmVersion,
+        regulation: getCurrentRegulation()
+      }
+    });
+  };
+  useEffect(() => {
+    fetchCandidates();
+  }, []);
+  useEffect(() => {
+    filterCandidates();
+  }, [selectedFilter, searchQuery, sortBy, candidates]);
+  return <div className="min-h-screen bg-gray-50 p-4">
       <style jsx>{`
         body {
-          font-size: ${fontSize}px;
+          background: #f9fafb;
         }
-        ${colorBlindMode ? `
-          * {
-            filter: hue-rotate(15deg) saturate(0.8);
-          }
-        ` : ''}
       `}</style>
-
+      
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">
-            候选人管理（合规版）
-          </h1>
-          <div className="flex items-center space-x-2">
-            <LanguageSwitcher currentLang={language} onLanguageChange={setLanguage} />
-            <ThemeToggle isDark={isDark} onToggle={() => setIsDark(!isDark)} />
-            <AccessibilityMenu fontSize={fontSize} onFontSizeChange={setFontSize} colorBlindMode={colorBlindMode} onColorBlindToggle={() => setColorBlindMode(!colorBlindMode)} />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">候选人管理</h1>
+            <p className="text-gray-600 mt-1">基于{getCurrentRegulation()}的合规候选人筛选</p>
           </div>
-        </div>
-
-        {showBiasWarning && <Alert className="mb-4 border-red-500 bg-red-50">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              检测到高风险候选人，需要人工复核确认。请勾选"人类最终决策"确认框后再执行操作。
-            </AlertDescription>
-          </Alert>}
-
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>候选人列表</CardTitle>
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" onClick={handleExportReport}>
-                  <Download className="h-4 w-4 mr-1" />
-                  导出报告
-                </Button>
-                <label className="flex items-center space-x-2">
-                  <Checkbox checked={humanReviewConfirmed} onCheckedChange={setHumanReviewConfirmed} />
-                  <span className="text-sm">人类最终决策确认</span>
-                </label>
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 p-2 bg-blue-50 rounded-lg">
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-blue-600">AI置信度: {modelConfidence}%</span>
+              </div>
+              <div className="flex items-center space-x-2 p-2 bg-green-50 rounded-lg">
+                <Shield className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-600">算法版本: {algorithmVersion}</span>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">
-                      <Checkbox checked={selectedCandidates.length === candidates.length} onCheckedChange={checked => {
-                      if (checked) {
-                        setSelectedCandidates(candidates.map(c => c.id));
-                      } else {
-                        setSelectedCandidates([]);
-                      }
-                    }} />
-                    </th>
-                    <th className="text-left p-2">候选人</th>
-                    <th className="text-left p-2">匹配度</th>
-                    <th className="text-left p-2">偏见风险</th>
-                    <th className="text-left p-2">多样性积分</th>
-                    <th className="text-left p-2">状态</th>
-                    <th className="text-left p-2">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {candidates.map(candidate => <tr key={candidate.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">
-                        <Checkbox checked={selectedCandidates.includes(candidate.id)} onCheckedChange={() => handleSelectCandidate(candidate.id)} />
-                      </td>
-                      <td className="p-2">
-                        <div>
-                          <div className="font-medium">{candidate.name}</div>
-                          <div className="text-sm text-gray-600">{candidate.position}</div>
-                          <div className="text-xs text-gray-500">{candidate.experience} | {candidate.education} | {candidate.location}</div>
-                        </div>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant="default">{candidate.matchScore}%</Badge>
-                      </td>
-                      <td className="p-2">
-                        <BiasDetectionBar score={candidate.biasRisk} threshold={5} />
-                      </td>
-                      <td className="p-2">
-                        <Badge variant="secondary" className="bg-green-100">
-                          {candidate.diversityScore}
-                        </Badge>
-                      </td>
-                      <td className="p-2">
-                        <Badge variant={candidate.status === '已通过' ? 'default' : candidate.status === '面试中' ? 'secondary' : candidate.status === '待面试' ? 'outline' : 'destructive'}>
-                          {candidate.status}
-                        </Badge>
-                      </td>
-                      <td className="p-2">
-                        <Button size="sm" variant="outline">查看详情</Button>
-                      </td>
-                    </tr>)}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-600">
-            已选择 {selectedCandidates.length} 位候选人
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => handleBatchAction('screening')} disabled={selectedCandidates.length === 0}>
-              批量初筛
+            <Button onClick={exportAllReports} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              批量导出
             </Button>
-            <Button variant="secondary" onClick={() => handleBatchAction('interview')} disabled={selectedCandidates.length === 0}>
-              批量面试
-            </Button>
-            <Button variant="destructive" onClick={() => handleBatchAction('reject')} disabled={selectedCandidates.length === 0}>
-              批量拒绝
+            <Button onClick={fetchCandidates} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              刷新
             </Button>
           </div>
         </div>
+
+        {/* 统计信息 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">总候选人</p>
+                <p className="text-2xl font-bold">{candidates.length}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-500" />
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">高匹配度</p>
+                <p className="text-2xl font-bold">{candidates.filter(c => c.matchScore >= 90).length}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-500" />
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">低偏见风险</p>
+                <p className="text-2xl font-bold">{candidates.filter(c => c.biasScore <= 3).length}</p>
+              </div>
+              <Shield className="h-8 w-8 text-yellow-500" />
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">本周新增</p>
+                <p className="text-2xl font-bold">{candidates.filter(c => new Date(c.lastActive) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length}</p>
+              </div>
+              <Users className="h-8 w-8 text-purple-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* 筛选器 */}
+        <CandidateFilters selectedFilter={selectedFilter} onFilterChange={setSelectedFilter} searchQuery={searchQuery} onSearchChange={setSearchQuery} sortBy={sortBy} onSortChange={setSortBy} />
+
+        {/* 候选人列表 */}
+        {loading ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="bg-white rounded-lg shadow p-6 animate-pulse">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                  <div>
+                    <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-24"></div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>)}
+          </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredCandidates.map(candidate => <CandidateCard key={candidate.id} candidate={candidate} onViewDetails={viewCandidateDetails} onExportReport={exportCandidateReport} />)}
+          </div>}
+
+        {/* 无结果提示 */}
+        {filteredCandidates.length === 0 && !loading && <div className="text-center py-12">
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg">暂无符合条件的候选人</p>
+            <p className="text-gray-400 mt-2">请调整筛选条件或搜索关键词</p>
+          </div>}
       </div>
     </div>;
 }

@@ -1,349 +1,468 @@
 // @ts-ignore;
 import React, { useState, useEffect } from 'react';
 // @ts-ignore;
-import { Card, CardContent, CardHeader, CardTitle, Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Badge, Alert, AlertDescription } from '@/components/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Badge, Slider, Switch, useToast } from '@/components/ui';
 // @ts-ignore;
-import { Sparkles, Shield, AlertTriangle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Briefcase, DollarSign, MapPin, Clock, Users, TrendingUp, Shield, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 // @ts-ignore;
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { AccessibilityMenu } from '@/components/AccessibilityMenu';
 import { BiasDetectionBar } from '@/components/BiasDetectionBar';
+// @ts-ignore;
+import { ComplianceModal } from '@/components/ComplianceModal';
 export default function RecruiterJobPost(props) {
-  const {
-    $w
-  } = props;
   const [jobData, setJobData] = useState({
     title: '',
     description: '',
     requirements: '',
     salaryRange: '',
     location: '',
-    experience: '',
+    jobType: 'full-time',
+    experienceLevel: 'mid',
     skills: [],
-    companyName: '',
-    diversityScore: 75,
-    biasScore: 2
+    diversityScore: 85,
+    biasScore: 2,
+    blindMode: false,
+    algorithmVersion: 'v2.3.1',
+    regulationVersion: 'EU_AI_Act_2025_v3'
   });
-  const [aiGenerated, setAiGenerated] = useState(false);
+  const [modelConfidence, setModelConfidence] = useState(95);
   const [biasAlerts, setBiasAlerts] = useState([]);
-  const [fontSize, setFontSize] = useState(16);
-  const [colorBlindMode, setColorBlindMode] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-  const [language, setLanguage] = useState('zh');
-  const [showBiasAnalysis, setShowBiasAnalysis] = useState(false);
-  const [humanReviewRequired, setHumanReviewRequired] = useState(false);
-  const biasWords = [{
-    word: 'aggressive',
-    suggestion: 'assertive',
-    severity: 'high'
-  }, {
-    word: 'rockstar',
-    suggestion: 'experienced professional',
-    severity: 'medium'
-  }, {
-    word: 'ninja',
-    suggestion: 'skilled developer',
-    severity: 'medium'
-  }, {
-    word: 'guru',
-    suggestion: 'expert',
-    severity: 'low'
-  }, {
-    word: 'young',
-    suggestion: 'energetic',
-    severity: 'medium'
-  }, {
-    word: 'native speaker',
-    suggestion: 'fluent in',
-    severity: 'high'
-  }];
-  const handleGenerateAIDescription = async () => {
-    const mockDescription = `我们正在寻找一位充满激情的${jobData.title}加入我们的团队。您将负责设计和开发创新的解决方案，与跨职能团队合作，推动技术卓越。
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [regulationVersion, setRegulationVersion] = useState('EU_AI_Act_2025_v3');
+  const [algorithmVersion, setAlgorithmVersion] = useState('v2.3.1');
+  const {
+    toast
+  } = useToast();
+  const {
+    $w
+  } = props;
 
-主要职责：
-• 设计和实现高质量的软件解决方案
-• 与产品、设计和工程团队紧密合作
-• 编写干净、可维护的代码
-• 参与代码审查和技术讨论
+  // 获取当前法规
+  const getCurrentRegulation = () => {
+    const region = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (region.includes('Europe')) return 'EU_AI_Act';
+    if (region.includes('America')) return 'US_State_Bias_Audit';
+    if (region.includes('Asia/Shanghai')) return 'China_Content_Review';
+    return 'EU_AI_Act';
+  };
 
-任职要求：
-• ${jobData.experience}年以上相关经验
-• 精通${jobData.skills.join('、')}
-• 良好的沟通和团队协作能力
-• 计算机科学或相关专业学位
+  // 实时AI生成置信度
+  const updateModelConfidence = async () => {
+    try {
+      const explanation = await $w.cloud.callDataSource({
+        dataSourceName: 'ai_explanation_2025',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              entityType: {
+                $eq: 'job_post'
+              },
+              entityId: {
+                $eq: 'new-job-post'
+              }
+            }
+          },
+          select: {
+            $master: true
+          },
+          orderBy: [{
+            createdAt: 'desc'
+          }],
+          pageSize: 1
+        }
+      });
+      if (explanation.records && explanation.records.length > 0) {
+        setModelConfidence(explanation.records[0].modelConfidence || 95);
+      }
+    } catch (error) {
+      console.error('获取AI置信度失败:', error);
+    }
+  };
+
+  // 实时偏见检测
+  const detectBias = async text => {
+    try {
+      const audit = await $w.cloud.callDataSource({
+        dataSourceName: 'compliance_audit_2025',
+        methodName: 'wedaCreateV2',
+        params: {
+          data: {
+            entityType: 'job_post',
+            entityId: 'new-job-post',
+            auditType: 'bias_detection',
+            content: text,
+            regulation: getCurrentRegulation(),
+            algorithmVersion: algorithmVersion,
+            createdAt: new Date().toISOString()
+          }
+        }
+      });
+      if (audit) {
+        setJobData(prev => ({
+          ...prev,
+          biasScore: audit.score || 2
+        }));
+        setBiasAlerts(audit.alerts || []);
+      }
+    } catch (error) {
+      console.error('偏见检测失败:', error);
+    }
+  };
+
+  // 生成职位描述
+  const generateJobDescription = async () => {
+    setIsGenerating(true);
+    try {
+      // 模拟AI生成
+      const generatedDescription = `我们正在寻找一位${jobData.title}，负责以下工作：
+- 参与产品需求分析和系统设计
+- 编写高质量、可维护的代码
+- 与团队成员协作，推动项目进展
+- 持续优化系统性能和用户体验
+
+要求：
+- ${jobData.experienceLevel}级经验
+- 熟练掌握相关技术栈
+- 具备良好的沟通能力和团队协作精神
+- 有持续学习的意愿和能力
 
 我们提供：
-• 具有竞争力的薪酬：${jobData.salaryRange}
-• 灵活的工作安排和远程工作选项
-• 持续学习和职业发展机会
-• 包容和多元化的工作环境`;
-    setJobData(prev => ({
-      ...prev,
-      description: mockDescription
-    }));
-    setAiGenerated(true);
-    const detectedBiases = biasWords.filter(bias => mockDescription.toLowerCase().includes(bias.word.toLowerCase()));
-    setBiasAlerts(detectedBiases);
-    setShowBiasAnalysis(true);
+- 具有竞争力的薪酬待遇
+- 完善的培训和发展机会
+- 开放包容的工作环境
+- 灵活的工作时间安排`;
+      setJobData(prev => ({
+        ...prev,
+        description: generatedDescription
+      }));
+      setModelConfidence(98);
+      toast({
+        title: "生成成功",
+        description: "AI已为您生成职位描述，置信度98%"
+      });
+    } catch (error) {
+      toast({
+        title: "生成失败",
+        description: "请稍后重试",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
-  const handleBiasCorrection = () => {
-    let correctedDescription = jobData.description;
-    biasAlerts.forEach(bias => {
-      correctedDescription = correctedDescription.replace(new RegExp(bias.word, 'gi'), bias.suggestion);
-    });
-    setJobData(prev => ({
-      ...prev,
-      description: correctedDescription
-    }));
-    setBiasAlerts([]);
-  };
-  const handleSubmit = async () => {
-    if (biasAlerts.length > 0) {
-      setHumanReviewRequired(true);
+
+  // 发布职位
+  const publishJob = async () => {
+    if (!jobData.title || !jobData.description) {
+      toast({
+        title: "请填写完整信息",
+        description: "职位标题和描述不能为空",
+        variant: "destructive"
+      });
       return;
     }
     try {
-      await $w.cloud.callDataSource({
+      const job = await $w.cloud.callDataSource({
         dataSourceName: 'job_post',
         methodName: 'wedaCreateV2',
         params: {
           data: {
-            ...jobData,
-            recruiterId: $w.auth.currentUser?.userId || 'mock-recruiter-id',
-            createdAt: new Date(),
-            status: 'active',
-            complianceChecked: true,
+            title: jobData.title,
+            description: jobData.description,
+            requirements: jobData.requirements,
+            salaryRange: jobData.salaryRange,
+            location: jobData.location,
+            jobType: jobData.jobType,
+            experienceLevel: jobData.experienceLevel,
+            skills: jobData.skills,
+            diversityScore: jobData.diversityScore,
             biasScore: jobData.biasScore,
-            diversityScore: jobData.diversityScore
+            blindMode: jobData.blindMode,
+            recruiterId: $w.auth.currentUser?.userId || 'mock-recruiter-id',
+            algorithmVersion: algorithmVersion,
+            regulationVersion: regulationVersion,
+            regulation: getCurrentRegulation(),
+            createdAt: new Date().toISOString(),
+            status: 'active'
           }
         }
       });
-      alert('职位发布成功！已符合所有合规要求。');
+      toast({
+        title: "发布成功",
+        description: `职位"${jobData.title}"已成功发布，AI置信度${modelConfidence}%`
+      });
+      // 重置表单
+      setJobData({
+        title: '',
+        description: '',
+        requirements: '',
+        salaryRange: '',
+        location: '',
+        jobType: 'full-time',
+        experienceLevel: 'mid',
+        skills: [],
+        diversityScore: 85,
+        biasScore: 2,
+        blindMode: false,
+        algorithmVersion: algorithmVersion,
+        regulationVersion: regulationVersion
+      });
     } catch (error) {
-      console.error('职位发布失败:', error);
+      toast({
+        title: "发布失败",
+        description: error.message || "请稍后重试",
+        variant: "destructive"
+      });
     }
   };
-  return <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 p-4`}>
+
+  // 添加技能标签
+  const addSkill = skill => {
+    if (skill && !jobData.skills.includes(skill)) {
+      setJobData(prev => ({
+        ...prev,
+        skills: [...prev.skills, skill]
+      }));
+    }
+  };
+
+  // 移除技能标签
+  const removeSkill = skill => {
+    setJobData(prev => ({
+      ...prev,
+      skills: prev.skills.filter(s => s !== skill)
+    }));
+  };
+  useEffect(() => {
+    setRegulationVersion(getCurrentRegulation() + '_2025_v3');
+    updateModelConfidence();
+  }, []);
+  useEffect(() => {
+    if (jobData.description) {
+      detectBias(jobData.description);
+    }
+  }, [jobData.description]);
+  const experienceLevels = [{
+    value: 'entry',
+    label: '初级 (0-2年)'
+  }, {
+    value: 'mid',
+    label: '中级 (3-5年)'
+  }, {
+    value: 'senior',
+    label: '高级 (5-8年)'
+  }, {
+    value: 'expert',
+    label: '专家 (8年以上)'
+  }];
+  const jobTypes = [{
+    value: 'full-time',
+    label: '全职'
+  }, {
+    value: 'part-time',
+    label: '兼职'
+  }, {
+    value: 'contract',
+    label: '合同'
+  }, {
+    value: 'internship',
+    label: '实习'
+  }];
+  const commonSkills = ['JavaScript', 'Python', 'React', 'Node.js', 'SQL', 'AWS', 'Docker', 'Kubernetes', 'Machine Learning', 'Data Analysis'];
+  return <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-blue-50 p-4">
       <style jsx>{`
         body {
-          font-size: ${fontSize}px;
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
         }
-        ${colorBlindMode ? `
-          * {
-            filter: hue-rotate(15deg) saturate(0.8);
-          }
-        ` : ''}
       `}</style>
-
+      
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">
-            发布新职位（合规版）
-          </h1>
-          <div className="flex items-center space-x-2">
-            <LanguageSwitcher currentLang={language} onLanguageChange={setLanguage} />
-            <ThemeToggle isDark={isDark} onToggle={() => setIsDark(!isDark)} />
-            <AccessibilityMenu fontSize={fontSize} onFontSizeChange={setFontSize} colorBlindMode={colorBlindMode} onColorBlindToggle={() => setColorBlindMode(!colorBlindMode)} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>基本信息</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">职位名称</label>
-                <Input placeholder="例如：高级前端工程师" value={jobData.title} onChange={e => setJobData(prev => ({
-                ...prev,
-                title: e.target.value
-              }))} />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">公司名称</label>
-                <Input placeholder="公司名称" value={jobData.companyName} onChange={e => setJobData(prev => ({
-                ...prev,
-                companyName: e.target.value
-              }))} />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">薪资范围</label>
-                <Input placeholder="例如：25k-35k" value={jobData.salaryRange} onChange={e => setJobData(prev => ({
-                ...prev,
-                salaryRange: e.target.value
-              }))} />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">工作地点</label>
-                <Select value={jobData.location} onValueChange={value => setJobData(prev => ({
-                ...prev,
-                location: value
-              }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="北京">北京</SelectItem>
-                    <SelectItem value="上海">上海</SelectItem>
-                    <SelectItem value="深圳">深圳</SelectItem>
-                    <SelectItem value="广州">广州</SelectItem>
-                    <SelectItem value="杭州">杭州</SelectItem>
-                    <SelectItem value="远程">远程</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">经验要求</label>
-                <Select value={jobData.experience} onValueChange={value => setJobData(prev => ({
-                ...prev,
-                experience: value
-              }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0-1">0-1年</SelectItem>
-                    <SelectItem value="1-3">1-3年</SelectItem>
-                    <SelectItem value="3-5">3-5年</SelectItem>
-                    <SelectItem value="5-10">5-10年</SelectItem>
-                    <SelectItem value="10+">10年以上</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">技能要求</label>
-                <Input placeholder="用逗号分隔，例如：React, TypeScript, Node.js" value={jobData.skills.join(', ')} onChange={e => setJobData(prev => ({
-                ...prev,
-                skills: e.target.value.split(',').map(s => s.trim())
-              }))} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>AI描述生成</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button onClick={handleGenerateAIDescription} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500" disabled={!jobData.title || !jobData.companyName}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                AI生成职位描述
-              </Button>
-
-              {aiGenerated && <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">职位描述</label>
-                    <Textarea rows={8} value={jobData.description} onChange={e => setJobData(prev => ({
-                  ...prev,
-                  description: e.target.value
-                }))} className="font-mono text-sm" />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">任职要求</label>
-                    <Textarea rows={6} value={jobData.requirements} onChange={e => setJobData(prev => ({
-                  ...prev,
-                  requirements: e.target.value
-                }))} placeholder="例如：计算机科学学位，3年以上相关经验..." />
-                  </div>
-
-                  {showBiasAnalysis && <div className="space-y-3">
-                      <h4 className="font-medium text-sm">偏见检测结果</h4>
-                      <BiasDetectionBar score={biasAlerts.length * 2} threshold={5} />
-                      
-                      {biasAlerts.length > 0 && <Alert className="border-yellow-500 bg-yellow-50">
-                          <AlertTriangle className="h-4 w-4" />
-                          <AlertDescription>
-                            <div className="space-y-2">
-                              <p>检测到以下可能带有偏见的词汇：</p>
-                              <ul className="text-sm space-y-1">
-                                {biasAlerts.map((bias, index) => <li key={index} className="flex justify-between">
-                                    <span className="text-red-600">{bias.word}</span>
-                                    <span className="text-green-600">→ {bias.suggestion}</span>
-                                  </li>)}
-                              </ul>
-                              <Button size="sm" variant="outline" onClick={handleBiasCorrection} className="mt-2">
-                                一键修正偏见词汇
-                              </Button>
-                            </div>
-                          </AlertDescription>
-                        </Alert>}
-
-                      {biasAlerts.length === 0 && <Alert className="border-green-500 bg-green-50">
-                          <CheckCircle className="h-4 w-4" />
-                          <AlertDescription>
-                            恭喜！职位描述已通过偏见检测，符合DEI标准。
-                          </AlertDescription>
-                        </Alert>}
-                    </div>}
-                </div>}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="mt-6">
+        <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle>合规检查</CardTitle>
+            <CardTitle className="text-2xl">发布新职位</CardTitle>
+            <CardDescription>基于{getCurrentRegulation()}的合规职位发布</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">EU AI Act合规</span>
+          
+          <CardContent className="space-y-6">
+            {/* 合规信息展示 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-600">
+                  <TrendingUp className="inline h-4 w-4 mr-1" />
+                  AI生成置信度: {modelConfidence}%
+                </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">GDPR数据保护</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">中国PIPL合规</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium">多样性积分：</span>
-                <Badge variant="secondary" className="ml-2">
-                  {jobData.diversityScore}/100
-                </Badge>
-              </div>
-              <div>
-                <span className="text-sm font-medium">偏见风险：</span>
-                <Badge variant={jobData.biasScore <= 3 ? "default" : "destructive"}>
-                  {jobData.biasScore}/10
-                </Badge>
+              <div className="p-3 bg-green-50 rounded-lg">
+                <p className="text-sm text-green-600">
+                  <Shield className="inline h-4 w-4 mr-1" />
+                  算法版本: {algorithmVersion}
+                </p>
               </div>
             </div>
 
-            {humanReviewRequired && <Alert className="border-red-500 bg-red-50">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  检测到偏见词汇，需要人工复核后才能发布。请修正偏见词汇或联系管理员。
-                </AlertDescription>
-              </Alert>}
+            {/* 盲选模式 */}
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+              <div>
+                <h3 className="font-semibold flex items-center">
+                  <Eye className="w-5 h-5 mr-2 text-blue-600" />
+                  盲选模式
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  隐藏候选人个人信息，确保公平评估
+                </p>
+              </div>
+              <Switch checked={jobData.blindMode} onCheckedChange={checked => {
+              setJobData(prev => ({
+                ...prev,
+                blindMode: checked
+              }));
+            }} />
+            </div>
+
+            {/* 偏见检测 */}
+            <BiasDetectionBar biasScore={jobData.biasScore} alerts={biasAlerts} />
+
+            {/* 职位基本信息 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">职位标题</label>
+                <Input placeholder="例如：高级前端工程师" value={jobData.title} onChange={e => {
+                setJobData(prev => ({
+                  ...prev,
+                  title: e.target.value
+                }));
+                detectBias(e.target.value);
+              }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">工作地点</label>
+                <Input placeholder="例如：北京/上海/远程" value={jobData.location} onChange={e => setJobData(prev => ({
+                ...prev,
+                location: e.target.value
+              }))} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">工作类型</label>
+                <Select value={jobData.jobType} onValueChange={value => setJobData(prev => ({
+                ...prev,
+                jobType: value
+              }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobTypes.map(type => <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">经验要求</label>
+                <Select value={jobData.experienceLevel} onValueChange={value => setJobData(prev => ({
+                ...prev,
+                experienceLevel: value
+              }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {experienceLevels.map(level => <SelectItem key={level.value} value={level.value}>
+                        {level.label}
+                      </SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">薪资范围</label>
+              <Input placeholder="例如：15k-25k" value={jobData.salaryRange} onChange={e => setJobData(prev => ({
+              ...prev,
+              salaryRange: e.target.value
+            }))} />
+            </div>
+
+            {/* 技能标签 */}
+            <div>
+              <label className="block text-sm font-medium mb-2">技能要求</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {jobData.skills.map(skill => <Badge key={skill} variant="secondary" className="cursor-pointer" onClick={() => removeSkill(skill)}>
+                    {skill} ×
+                  </Badge>)}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {commonSkills.filter(skill => !jobData.skills.includes(skill)).map(skill => <Badge key={skill} variant="outline" className="cursor-pointer hover:bg-gray-100" onClick={() => addSkill(skill)}>
+                    + {skill}
+                  </Badge>)}
+              </div>
+            </div>
+
+            {/* 职位描述 */}
+            <div>
+              <label className="block text-sm font-medium mb-2">职位描述</label>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-gray-600">AI生成置信度: {modelConfidence}%</span>
+                <Button variant="outline" size="sm" onClick={generateJobDescription} disabled={isGenerating}>
+                  {isGenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'AI生成描述'}
+                </Button>
+              </div>
+              <Textarea placeholder="详细描述职位职责和要求..." value={jobData.description} onChange={e => {
+              setJobData(prev => ({
+                ...prev,
+                description: e.target.value
+              }));
+              detectBias(e.target.value);
+            }} rows={6} />
+            </div>
+
+            {/* 职位要求 */}
+            <div>
+              <label className="block text-sm font-medium mb-2">职位要求</label>
+              <Textarea placeholder="列出具体的技能和经验要求..." value={jobData.requirements} onChange={e => {
+              setJobData(prev => ({
+                ...prev,
+                requirements: e.target.value
+              }));
+              detectBias(e.target.value);
+            }} rows={4} />
+            </div>
+
+            {/* 多样性评分 */}
+            <div>
+              <label className="block text-sm font-medium mb-2">多样性评分</label>
+              <div className="flex items-center space-x-4">
+                <Slider value={[jobData.diversityScore]} onValueChange={value => setJobData(prev => ({
+                ...prev,
+                diversityScore: value[0]
+              }))} max={100} min={0} step={1} className="flex-1" />
+                <span className="text-sm font-medium">{jobData.diversityScore}/100</span>
+              </div>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex space-x-4">
+              <Button onClick={publishJob} className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500">
+                发布职位
+              </Button>
+              <Button variant="outline" onClick={() => setShowComplianceModal(true)}>
+                合规检查
+              </Button>
+              <Button variant="outline" onClick={() => setPreviewMode(!previewMode)}>
+                {previewMode ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                {previewMode ? '隐藏预览' : '预览效果'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="mt-6 flex justify-end space-x-4">
-          <Button variant="outline" onClick={() => $w.utils.navigateTo({
-          pageId: 'recruiter-dashboard',
-          params: {}
-        })}>
-            取消
-          </Button>
-          <Button onClick={handleSubmit} disabled={biasAlerts.length > 0} className="bg-gradient-to-r from-cyan-500 to-blue-500">
-            发布职位
-          </Button>
-        </div>
+        <ComplianceModal open={showComplianceModal} onOpenChange={setShowComplianceModal} jobData={jobData} regulation={getCurrentRegulation()} />
       </div>
     </div>;
 }

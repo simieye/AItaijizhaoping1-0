@@ -1,83 +1,86 @@
 
 {
   "name": "job_post",
-  "title": "职位发布",
-  "schemas": [
+  "fields": [
     {
       "name": "jobId",
-      "title": "职位ID",
-      "type": "String"
-    },
-    {
-      "name": "recruiterId",
-      "title": "招聘者ID",
-      "type": "String"
+      "type": "string",
+      "required": true,
+      "primary": true
     },
     {
       "name": "title",
-      "title": "职位名称",
-      "type": "String"
+      "type": "string",
+      "required": true
     },
     {
       "name": "description",
-      "title": "职位描述",
-      "type": "RichText"
-    },
-    {
-      "name": "isAIGenerated",
-      "title": "AI生成标记",
-      "type": "Boolean"
+      "type": "text"
     },
     {
       "name": "requirements",
-      "title": "职位要求",
-      "type": "Array",
-      "items": {
-        "type": "String"
-      }
+      "type": "text"
     },
     {
       "name": "salaryRange",
-      "title": "薪资范围",
-      "type": "String"
+      "type": "string"
     },
     {
       "name": "location",
-      "title": "工作地点",
-      "type": "String"
+      "type": "string"
     },
     {
-      "name": "remoteType",
-      "title": "远程类型",
-      "type": "String"
+      "name": "jobType",
+      "type": "string",
+      "enum": ["full-time", "part-time", "contract", "internship"]
     },
     {
-      "name": "status",
-      "title": "职位状态",
-      "type": "String"
+      "name": "experienceLevel",
+      "type": "string",
+      "enum": ["entry", "mid", "senior", "expert"]
     },
     {
       "name": "skills",
-      "title": "技能要求",
-      "type": "Array",
-      "items": {
-        "type": "String"
-      }
+      "type": "array",
+      "itemType": "string"
     },
     {
-      "name": "experienceYears",
-      "title": "经验要求",
-      "type": "String"
+      "name": "recruiterId",
+      "type": "string",
+      "required": true
     },
     {
-      "name": "department",
-      "title": "所属部门",
-      "type": "String"
+      "name": "diversityScore",
+      "type": "number"
     },
     {
-      "name": "teamSize",
-      "title": "团队规模",
-      "type": "String"
+      "name": "biasScore",
+      "type": "number"
+    },
+    {
+      "name": "blindMode",
+      "type": "boolean"
+    },
+    {
+      "name": "algorithmVersion",
+      "type": "string"
+    },
+    {
+      "name": "regulation",
+      "type": "string"
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "enum": ["active", "paused", "closed"]
+    },
+    {
+      "name": "createdAt",
+      "type": "datetime"
+    },
+    {
+      "name": "updatedAt",
+      "type": "datetime"
     }
   ]
 }

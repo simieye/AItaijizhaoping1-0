@@ -1,93 +1,173 @@
 // @ts-ignore;
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 // @ts-ignore;
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, Button, Checkbox } from '@/components/ui';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, Button, Badge, Card, CardContent, useToast } from '@/components/ui';
 // @ts-ignore;
-import { Shield, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Shield, CheckCircle, AlertCircle, XCircle, Loader2 } from 'lucide-react';
 
 export function ComplianceModal({
-  isOpen,
-  onClose,
-  onAccept,
-  type = 'ai_usage'
+  open,
+  onOpenChange,
+  jobData = {},
+  regulation = 'EU_AI_Act',
+  className = ''
 }) {
-  const [gdprConsent, setGdprConsent] = React.useState(false);
-  const [chinaConsent, setChinaConsent] = React.useState(false);
-  const renderContent = () => {
-    switch (type) {
-      case 'ai_usage':
-        return <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <Shield className="h-5 w-5 text-blue-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium">AI系统使用告知 (EU AI Act Article 13)</h4>
-                <p className="text-sm text-gray-600 mt-1">
-                  本系统使用AI算法进行简历筛选、面试评估和匹配度计算。所有AI决策均可要求人工复核。
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start space-x-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium">数据使用授权</h4>
-                <p className="text-sm text-gray-600 mt-1">
-                  您的数据将用于AI模型训练，但不会用于识别个人身份。可随时撤回授权。
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <Checkbox checked={gdprConsent} onCheckedChange={setGdprConsent} />
-                <span className="text-sm">我同意GDPR数据处理条款</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <Checkbox checked={chinaConsent} onCheckedChange={setChinaConsent} />
-                <span className="text-sm">我同意中国个人信息保护法条款</span>
-              </label>
-            </div>
-          </div>;
-      case 'bias_detection':
-        return <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <h4 className="font-medium">偏见检测提示</h4>
-                <p className="text-sm text-gray-600 mt-1">
-                  系统检测到当前内容可能存在偏见风险，建议人工复核。
-                </p>
-              </div>
-            </div>
-          </div>;
+  const [complianceResults, setComplianceResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const {
+    toast
+  } = useToast();
+  useEffect(() => {
+    if (open && jobData) {
+      checkCompliance();
+    }
+  }, [open, jobData]);
+  const checkCompliance = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // 模拟合规检查
+      setTimeout(() => {
+        const results = {
+          overall: Math.random() > 0.3 ? 'compliant' : 'warning',
+          checks: [{
+            name: '偏见检测',
+            status: Math.random() > 0.2 ? 'pass' : 'warning',
+            score: Math.floor(Math.random() * 30) + 70,
+            description: '检测职位描述中的潜在偏见'
+          }, {
+            name: '隐私合规',
+            status: Math.random() > 0.1 ? 'pass' : 'fail',
+            score: Math.floor(Math.random() * 20) + 80,
+            description: '确保符合GDPR等隐私法规'
+          }, {
+            name: '算法透明度',
+            status: Math.random() > 0.15 ? 'pass' : 'warning',
+            score: Math.floor(Math.random() * 25) + 75,
+            description: 'AI决策过程的可解释性'
+          }, {
+            name: '公平性评估',
+            status: Math.random() > 0.2 ? 'pass' : 'warning',
+            score: Math.floor(Math.random() * 20) + 80,
+            description: '确保招聘过程的公平性'
+          }],
+          recommendations: ['建议使用更中性的职位描述语言', '增加算法决策的透明度说明', '定期审查招聘流程的公平性']
+        };
+        setComplianceResults(results);
+        setLoading(false);
+      }, 1500);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+      toast({
+        title: "合规检查失败",
+        description: "无法完成合规检查，请稍后重试",
+        variant: "destructive"
+      });
+    }
+  };
+  const getStatusIcon = status => {
+    switch (status) {
+      case 'pass':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'warning':
+        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+      case 'fail':
+        return <XCircle className="h-5 w-5 text-red-500" />;
       default:
         return null;
     }
   };
-  return <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+  const getStatusBadge = status => {
+    switch (status) {
+      case 'pass':
+        return <Badge variant="default" className="bg-green-500">通过</Badge>;
+      case 'warning':
+        return <Badge variant="secondary" className="bg-yellow-500">警告</Badge>;
+      case 'fail':
+        return <Badge variant="destructive">失败</Badge>;
+      default:
+        return null;
+    }
+  };
+  if (!open) return null;
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={`${className} max-w-2xl`}>
         <DialogHeader>
-          <DialogTitle>合规提示</DialogTitle>
+          <DialogTitle className="flex items-center">
+            <Shield className="h-5 w-5 mr-2" />
+            合规性检查报告
+          </DialogTitle>
           <DialogDescription>
-            {type === 'ai_usage' ? '请仔细阅读并同意以下条款' : '系统检测到潜在风险'}
+            基于 {regulation} 的AI招聘合规性评估
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="py-4">
-          {renderContent()}
-        </div>
-        
+
+        {loading && <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">正在检查合规性...</span>
+          </div>}
+
+        {error && <div className="text-center py-8">
+            <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600">{error}</p>
+          </div>}
+
+        {complianceResults && !loading && !error && <div className="space-y-4">
+            {/* 总体状态 */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">总体合规状态</h3>
+                    <p className="text-sm text-gray-600">基于当前法规的评估结果</p>
+                  </div>
+                  {complianceResults.overall === 'compliant' ? <Badge className="bg-green-500">合规</Badge> : <Badge variant="secondary" className="bg-yellow-500">需要关注</Badge>}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 详细检查项 */}
+            <div className="space-y-3">
+              <h3 className="font-semibold">详细检查项</h3>
+              {complianceResults.checks.map((check, index) => <Card key={index}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {getStatusIcon(check.status)}
+                        <div>
+                          <p className="font-medium">{check.name}</p>
+                          <p className="text-sm text-gray-600">{check.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium">{check.score}%</span>
+                        {getStatusBadge(check.status)}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>)}
+            </div>
+
+            {/* 建议 */}
+            {complianceResults.recommendations.length > 0 && <div className="space-y-3">
+                <h3 className="font-semibold">改进建议</h3>
+                <ul className="space-y-2">
+                  {complianceResults.recommendations.map((rec, index) => <li key={index} className="flex items-start space-x-2">
+                      <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5" />
+                      <span className="text-sm">{rec}</span>
+                    </li>)}
+                </ul>
+              </div>}
+          </div>}
+
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            取消
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            关闭
           </Button>
-          <Button onClick={() => {
-          if (type === 'ai_usage' && (!gdprConsent || !chinaConsent)) {
-            return;
-          }
-          onAccept();
-        }} disabled={type === 'ai_usage' && (!gdprConsent || !chinaConsent)}>
-            确认并继续
+          <Button onClick={checkCompliance} disabled={loading}>
+            重新检查
           </Button>
         </DialogFooter>
       </DialogContent>

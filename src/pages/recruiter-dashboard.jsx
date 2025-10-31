@@ -1,9 +1,9 @@
 // @ts-ignore;
 import React, { useState, useEffect } from 'react';
 // @ts-ignore;
-import { Card, CardContent, CardHeader, CardTitle, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsContent, TabsList, TabsTrigger, Alert, AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, useToast } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle, Button, Badge, useToast } from '@/components/ui';
 // @ts-ignore;
-import { RefreshCw, Download, TrendingUp, Users, FileText, Shield, Badge } from 'lucide-react';
+import { Briefcase, Users, TrendingUp, Clock, RefreshCw, AlertCircle } from 'lucide-react';
 
 // @ts-ignore;
 import { RecruiterStats } from '@/components/RecruiterStats';
@@ -12,19 +12,12 @@ import { CandidateList } from '@/components/CandidateList';
 // @ts-ignore;
 import { ComplianceChart } from '@/components/ComplianceChart';
 export default function RecruiterDashboard(props) {
+  const [recruiterData, setRecruiterData] = useState(null);
+  const [recentJobs, setRecentJobs] = useState([]);
+  const [recentCandidates, setRecentCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [candidates, setCandidates] = useState([]);
-  const [jobs, setJobs] = useState([]);
-  const [algorithmVersion, setAlgorithmVersion] = useState('v2.3.1');
-  const [benchmarkDelta, setBenchmarkDelta] = useState(12);
-  const [modelConfidence, setModelConfidence] = useState(95);
-  const [algorithmVersions, setAlgorithmVersions] = useState(['v2.3.1', 'v2.3.0', 'v2.2.9']);
-  const [biasReductionData, setBiasReductionData] = useState([]);
-  const [deiTrendData, setDeiTrendData] = useState([]);
-  const [showVersionAlert, setShowVersionAlert] = useState(false);
-  const [expectedVersion, setExpectedVersion] = useState('v2.3.1');
-  const [regulationFilter, setRegulationFilter] = useState('all');
-  const [exportFormat, setExportFormat] = useState('pdf');
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const {
     toast
   } = useToast();
@@ -32,29 +25,48 @@ export default function RecruiterDashboard(props) {
     $w
   } = props;
 
-  // 获取当前法规
-  const getCurrentRegulation = () => {
-    const region = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (region.includes('Europe')) return 'EU_AI_Act';
-    if (region.includes('America')) return 'US_State_Bias_Audit';
-    if (region.includes('Asia/Shanghai')) return 'China_Content_Review';
-    return 'EU_AI_Act';
-  };
-
-  // 检查算法版本
-  const checkAlgorithmVersion = async () => {
+  // 获取招聘者数据
+  const fetchRecruiterData = async () => {
     try {
-      const latestAudit = await $w.cloud.callDataSource({
-        dataSourceName: 'compliance_audit',
+      setLoading(true);
+      setError(null);
+
+      // 获取当前用户信息
+      const currentUser = $w.auth.currentUser;
+      if (!currentUser) {
+        throw new Error('用户未登录');
+      }
+
+      // 获取招聘者档案
+      const profile = await $w.cloud.callDataSource({
+        dataSourceName: 'recruiter_profile',
+        methodName: 'wedaGetItemV2',
+        params: {
+          filter: {
+            where: {
+              userId: {
+                $eq: currentUser.userId
+              }
+            }
+          },
+          select: {
+            $master: true
+          }
+        }
+      });
+      if (!profile) {
+        throw new Error('未找到招聘者档案');
+      }
+
+      // 获取最近发布的职位
+      const jobs = await $w.cloud.callDataSource({
+        dataSourceName: 'job_post',
         methodName: 'wedaGetRecordsV2',
         params: {
           filter: {
             where: {
-              entityType: {
-                $eq: 'system'
-              },
-              auditType: {
-                $eq: 'algorithm_version'
+              recruiterId: {
+                $eq: currentUser.userId
               }
             }
           },
@@ -64,29 +76,11 @@ export default function RecruiterDashboard(props) {
           orderBy: [{
             createdAt: 'desc'
           }],
-          pageSize: 1
+          pageSize: 5
         }
       });
-      if (latestAudit.records && latestAudit.records.length > 0) {
-        const latestVersion = latestAudit.records[0].algorithmVersion;
-        if (latestVersion !== expectedVersion) {
-          setShowVersionAlert(true);
-          setAlgorithmVersion(latestVersion);
-          toast({
-            title: "算法已更新",
-            description: `检测到新版本 ${latestVersion}，建议刷新页面获取最新功能`,
-            variant: "destructive"
-          });
-        }
-      }
-    } catch (error) {
-      console.error('检查算法版本失败:', error);
-    }
-  };
 
-  // 获取候选人数据
-  const fetchCandidates = async () => {
-    try {
+      // 获取最近的候选人
       const candidates = await $w.cloud.callDataSource({
         dataSourceName: 'candidate_profile',
         methodName: 'wedaGetRecordsV2',
@@ -103,89 +97,20 @@ export default function RecruiterDashboard(props) {
           },
           orderBy: [{
             updatedAt: 'desc'
-          }]
+          }],
+          pageSize: 5
         }
       });
 
-      // 获取合规审计数据
-      const candidateIds = candidates.records?.map(c => c.userId) || [];
-      let enrichedCandidates = [];
-      if (candidateIds.length > 0) {
-        const [audits, explanations] = await Promise.all([$w.cloud.callDataSource({
-          dataSourceName: 'compliance_audit',
-          methodName: 'wedaGetRecordsV2',
-          params: {
-            filter: {
-              where: {
-                entityType: {
-                  $eq: 'candidate'
-                },
-                entityId: {
-                  $in: candidateIds
-                }
-              }
-            },
-            select: {
-              $master: true
-            },
-            orderBy: [{
-              createdAt: 'desc'
-            }]
-          }
-        }), $w.cloud.callDataSource({
-          dataSourceName: 'ai_explanation',
-          methodName: 'wedaGetRecordsV2',
-          params: {
-            filter: {
-              where: {
-                entityType: {
-                  $eq: 'candidate'
-                },
-                entityId: {
-                  $in: candidateIds
-                }
-              }
-            },
-            select: {
-              $master: true
-            },
-            orderBy: [{
-              createdAt: 'desc'
-            }]
-          }
-        })]);
-        enrichedCandidates = candidates.records?.map(candidate => {
-          const audit = audits.records?.find(a => a.entityId === candidate.userId);
-          const explanation = explanations.records?.find(e => e.entityId === candidate.userId);
-          return {
-            id: candidate.userId,
-            name: candidate.fullName || '匿名候选人',
-            position: candidate.targetPosition || '未指定',
-            experience: candidate.experience || 0,
-            matchScore: candidate.matchScore || 85,
-            biasScore: audit?.score || 2,
-            algorithmVersion: audit?.algorithmVersion || 'v2.3.1',
-            modelConfidence: explanation?.modelConfidence || 95
-          };
-        }) || [];
-      }
-      setCandidates(enrichedCandidates);
-    } catch (error) {
-      console.error('获取候选人数据失败:', error);
-    }
-  };
-
-  // 获取职位数据
-  const fetchJobs = async () => {
-    try {
-      const jobs = await $w.cloud.callDataSource({
-        dataSourceName: 'job_post',
+      // 获取申请记录
+      const applications = await $w.cloud.callDataSource({
+        dataSourceName: 'application',
         methodName: 'wedaGetRecordsV2',
         params: {
           filter: {
             where: {
-              recruiterId: {
-                $eq: $w.auth.currentUser?.userId || 'mock-recruiter-id'
+              jobId: {
+                $in: jobs.records?.map(job => job.jobId) || []
               }
             }
           },
@@ -197,315 +122,254 @@ export default function RecruiterDashboard(props) {
           }]
         }
       });
-      setJobs(jobs.records || []);
-    } catch (error) {
-      console.error('获取职位数据失败:', error);
-    }
-  };
 
-  // 获取算法迭代数据
-  const fetchAlgorithmData = async () => {
-    try {
-      // 获取偏见降低趋势
-      const biasData = await $w.cloud.callDataSource({
-        dataSourceName: 'compliance_audit',
-        methodName: 'wedaGetRecordsV2',
-        params: {
-          filter: {
-            where: {
-              entityType: {
-                $eq: 'system'
-              },
-              auditType: {
-                $eq: 'bias_reduction'
-              }
-            }
-          },
-          select: {
-            $master: true
-          },
-          orderBy: [{
-            createdAt: 'desc'
-          }],
-          pageSize: 30
-        }
-      });
-      if (biasData.records) {
-        const formattedData = biasData.records.map(record => ({
-          date: new Date(record.createdAt).toLocaleDateString(),
-          biasReduction: record.details?.biasReduction || 0,
-          accuracy: record.details?.accuracy || 0
-        }));
-        setBiasReductionData(formattedData.reverse());
-      }
-
-      // 获取DEI趋势数据
-      const deiData = await $w.cloud.callDataSource({
-        dataSourceName: 'dei_metric',
-        methodName: 'wedaGetRecordsV2',
-        params: {
-          filter: {
-            where: {
-              entityType: {
-                $eq: 'recruiter'
-              },
-              entityId: {
-                $eq: $w.auth.currentUser?.userId || 'mock-recruiter-id'
-              }
-            }
-          },
-          select: {
-            $master: true
-          },
-          orderBy: [{
-            snapshotDate: 'desc'
-          }],
-          pageSize: 10
-        }
-      });
-      if (deiData.records) {
-        const formattedDeiData = [{
-          category: '性别多样性',
-          current: deiData.records.filter(r => r.dimension === 'gender').reduce((sum, r) => sum + r.percentage, 0) / deiData.records.filter(r => r.dimension === 'gender').length || 45,
-          benchmark: 40
-        }, {
-          category: '年龄多样性',
-          current: deiData.records.filter(r => r.dimension === 'age').reduce((sum, r) => sum + r.percentage, 0) / deiData.records.filter(r => r.dimension === 'age').length || 35,
-          benchmark: 30
-        }, {
-          category: '教育背景',
-          current: deiData.records.filter(r => r.dimension === 'education').reduce((sum, r) => sum + r.percentage, 0) / deiData.records.filter(r => r.dimension === 'education').length || 60,
-          benchmark: 55
-        }];
-        setDeiTrendData(formattedDeiData);
-
-        // 计算基准差异
-        const avgDelta = deiData.records.reduce((sum, r) => sum + (r.benchmarkDelta || 0), 0) / deiData.records.length;
-        setBenchmarkDelta(parseFloat(avgDelta.toFixed(1)));
-      }
-    } catch (error) {
-      console.error('获取算法数据失败:', error);
-    }
-  };
-
-  // 导出合规报告
-  const exportComplianceReport = async format => {
-    try {
-      const reportData = {
-        recruiterId: $w.auth.currentUser?.userId || 'mock-recruiter-id',
-        timestamp: new Date().toISOString(),
-        algorithmVersion: algorithmVersion,
-        regulation: getCurrentRegulation(),
-        candidates: candidates.length,
-        jobs: jobs.length,
-        biasReduction: benchmarkDelta,
-        modelConfidence: modelConfidence
-      };
-      // 这里应该调用后端API生成报告
-      const blob = new Blob([JSON.stringify(reportData, null, 2)], {
-        type: format === 'pdf' ? 'application/pdf' : 'application/json'
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `compliance_report_${algorithmVersion}_${Date.now()}.${format}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      // 组合候选人数据
+      const enrichedCandidates = candidates.records?.map(candidate => {
+        const candidateApps = applications.records?.filter(app => app.candidateId === candidate.userId) || [];
+        return {
+          ...candidate,
+          applications: candidateApps.length,
+          latestApplication: candidateApps[0]?.createdAt
+        };
+      }) || [];
+      setRecruiterData(profile);
+      setRecentJobs(jobs.records || []);
+      setRecentCandidates(enrichedCandidates);
+    } catch (err) {
+      console.error('获取招聘者数据失败:', err);
+      setError(err.message);
       toast({
-        title: "导出成功",
-        description: `合规报告已导出为${format.toUpperCase()}格式`
-      });
-    } catch (error) {
-      toast({
-        title: "导出失败",
-        description: "请稍后重试",
+        title: "获取数据失败",
+        description: err.message,
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
+
+  // 重试加载
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    fetchRecruiterData();
+  };
+
+  // 刷新数据
+  const handleRefresh = () => {
+    fetchRecruiterData();
+    toast({
+      title: "刷新成功",
+      description: "数据已更新"
+    });
+  };
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await Promise.all([fetchCandidates(), fetchJobs(), fetchAlgorithmData(), checkAlgorithmVersion()]);
-      setLoading(false);
+    fetchRecruiterData();
+  }, [retryCount]);
+
+  // 格式化日期
+  const formatDate = dateString => {
+    return new Date(dateString).toLocaleDateString('zh-CN');
+  };
+
+  // 获取状态颜色
+  const getStatusColor = status => {
+    const colors = {
+      active: 'bg-green-100 text-green-800',
+      paused: 'bg-yellow-100 text-yellow-800',
+      closed: 'bg-gray-100 text-gray-800'
     };
-    loadData();
-  }, []);
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  // 获取状态文本
+  const getStatusText = status => {
+    const texts = {
+      active: '招聘中',
+      paused: '已暂停',
+      closed: '已关闭'
+    };
+    return texts[status] || status;
+  };
   if (loading) {
-    return <div className="min-h-screen bg-gray-900 p-4">
-      <style jsx>{`
-        body {
-          background: #111827;
-        }
-      `}</style>
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div className="h-8 w-48 bg-gray-700 rounded animate-pulse" />
-          <div className="flex space-x-2">
-            <div className="h-8 w-24 bg-gray-700 rounded animate-pulse" />
-            <div className="h-8 w-8 bg-gray-700 rounded animate-pulse" />
+    return <div className="min-h-screen bg-gray-50 p-4">
+        <style jsx>{`
+          body {
+            background: #f9fafb;
+          }
+        `}</style>
+        
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">招聘者仪表板</h1>
+            <Button variant="outline" disabled>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              加载中...
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-full"></div>
+                </CardContent>
+              </Card>)}
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-gray-700 rounded animate-pulse" />)}
-        </div>
-      </div>
-    </div>;
+      </div>;
   }
-  return <div className="min-h-screen bg-gray-900 p-4">
-    <style jsx>{`
-      body {
-        background: #111827;
-      }
-    `}</style>
-    
-    <div className="max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white">招聘者仪表盘</h1>
-          <p className="text-gray-400 mt-1">基于{getCurrentRegulation()}的合规招聘管理</p>
+  if (error) {
+    return <div className="min-h-screen bg-gray-50 p-4">
+        <style jsx>{`
+          body {
+            background: #f9fafb;
+          }
+        `}</style>
+        
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">加载失败</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={handleRetry} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              重试
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Select value={regulationFilter} onValueChange={setRegulationFilter}>
-            <SelectTrigger className="w-[150px] bg-gray-800 border-gray-700">
-              <SelectValue placeholder="法规筛选" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部法规</SelectItem>
-              <SelectItem value="EU_AI_Act">EU AI Act</SelectItem>
-              <SelectItem value="US_State_Bias_Audit">US Bias Audit</SelectItem>
-              <SelectItem value="China_Content_Review">China Review</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={exportFormat} onValueChange={setExportFormat}>
-            <SelectTrigger className="w-[100px] bg-gray-800 border-gray-700">
-              <SelectValue placeholder="格式" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pdf">PDF</SelectItem>
-              <SelectItem value="json">JSON</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => exportComplianceReport(exportFormat)} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            导出报告
-          </Button>
-          <Button onClick={() => window.location.reload()} variant="outline">
+      </div>;
+  }
+  if (!recruiterData) {
+    return <div className="min-h-screen bg-gray-50 p-4">
+        <style jsx>{`
+          body {
+            background: #f9fafb;
+          }
+        `}</style>
+        
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">暂无招聘者档案</h2>
+            <p className="text-gray-600 mb-4">请先完善您的招聘者档案</p>
+            <Button onClick={() => $w.utils.navigateTo({
+            pageId: 'recruiter-job-post'
+          })}>
+              创建档案
+            </Button>
+          </div>
+        </div>
+      </div>;
+  }
+  return <div className="min-h-screen bg-gray-50 p-4">
+      <style jsx>{`
+        body {
+          background: #f9fafb;
+        }
+      `}</style>
+      
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">招聘者仪表板</h1>
+            <p className="text-gray-600">欢迎回来，{recruiterData.companyName || '招聘者'}</p>
+          </div>
+          <Button onClick={handleRefresh} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             刷新
           </Button>
         </div>
-      </div>
 
-      {/* 算法版本警告 */}
-      <AlertDialog open={showVersionAlert} onOpenChange={setShowVersionAlert}>
-        <AlertDialogContent className="bg-gray-800 border-gray-700">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">算法版本更新</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-300">
-              检测到偏见检测算法已更新至 {algorithmVersion} 版本，当前页面使用的是 {expectedVersion} 版本。
-              建议刷新页面以获取最新功能。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => window.location.reload()} className="bg-blue-600 hover:bg-blue-700">
-              立即刷新
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* 统计概览 */}
+        <RecruiterStats showCharts={true} />
 
-      {/* 关键指标 */}
-      <RecruiterStats totalCandidates={candidates.length} activeJobs={jobs.length} biasAlerts={candidates.filter(c => c.biasScore > 6).length} algorithmVersion={algorithmVersion} benchmarkDelta={benchmarkDelta} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          {/* 左侧：最近职位 */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>最近发布的职位</CardTitle>
+                  <Button size="sm" onClick={() => $w.utils.navigateTo({
+                  pageId: 'recruiter-job-post'
+                })}>
+                    发布新职位
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {recentJobs.length === 0 ? <div className="text-center py-8">
+                    <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">暂无发布的职位</p>
+                    <Button onClick={() => $w.utils.navigateTo({
+                  pageId: 'recruiter-job-post'
+                })} className="mt-4">
+                      发布第一个职位
+                    </Button>
+                  </div> : <div className="space-y-4">
+                    {recentJobs.map(job => <div key={job.jobId} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-semibold">{job.title}</h4>
+                            <p className="text-sm text-gray-600">{job.location}</p>
+                            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                              <span>{job.salaryRange || '面议'}</span>
+                              <span>{formatDate(job.createdAt)}</span>
+                            </div>
+                          </div>
+                          <Badge className={getStatusColor(job.status)}>
+                            {getStatusText(job.status)}
+                          </Badge>
+                        </div>
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>技能要求</span>
+                            <span>{(job.skills || []).length}个技能</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(job.skills || []).slice(0, 3).map(skill => <Badge key={skill} variant="outline" className="text-xs">
+                                {skill}
+                              </Badge>)}
+                            {(job.skills || []).length > 3 && <Badge variant="outline" className="text-xs">
+                                +{(job.skills || []).length - 3}
+                              </Badge>}
+                          </div>
+                        </div>
+                      </div>)}
+                  </div>}
+              </CardContent>
+            </Card>
 
-      <Tabs defaultValue="candidates" className="mt-6">
-        <TabsList className="bg-gray-800 border-gray-700">
-          <TabsTrigger value="candidates" className="text-gray-300 data-[state=active]:text-white">候选人</TabsTrigger>
-          <TabsTrigger value="jobs" className="text-gray-300 data-[state=active]:text-white">职位管理</TabsTrigger>
-          <TabsTrigger value="compliance" className="text-gray-300 data-[state=active]:text-white">合规分析</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="candidates">
-          <CandidateList candidates={candidates} onViewDetails={candidate => console.log('查看详情:', candidate)} onExportReport={candidate => console.log('导出报告:', candidate)} algorithmVersions={algorithmVersions} />
-        </TabsContent>
-
-        <TabsContent value="jobs">
-          <Card>
-            <CardHeader>
-              <CardTitle>职位管理</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {jobs.map(job => <div key={job.jobId} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-white">{job.title}</h3>
-                        <p className="text-sm text-gray-400">{job.companyName}</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className="text-gray-300">
-                          AI置信度: {modelConfidence}%
-                        </Badge>
-                        <Badge variant="outline" className="text-gray-300">
-                          {algorithmVersion}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex space-x-2">
-                      <Button size="sm" variant="outline">
-                        编辑职位
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        查看申请
-                      </Button>
-                    </div>
-                  </div>)}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="compliance">
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">算法迭代效果</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-400">-{benchmarkDelta}%</div>
-                    <div className="text-sm text-gray-400">偏见降低</div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">AI置信度</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-400">{modelConfidence}%</div>
-                    <div className="text-sm text-gray-400">模型准确性</div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">合规状态</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-400">✓</div>
-                    <div className="text-sm text-gray-400">{getCurrentRegulation()}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <ComplianceChart biasReductionData={biasReductionData} deiTrendData={deiTrendData} />
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>合规分析</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ComplianceChart type="overview" />
+              </CardContent>
+            </Card>
           </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  </div>;
+
+          {/* 右侧：最近候选人 */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>最近候选人</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CandidateList candidates={recentCandidates} compact={true} onCandidateSelect={candidate => {
+                $w.utils.navigateTo({
+                  pageId: 'recruiter-candidates',
+                  params: {
+                    candidateId: candidate.userId
+                  }
+                });
+              }} />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>;
 }
