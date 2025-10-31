@@ -3,13 +3,12 @@ import React, { useState, useEffect } from 'react';
 // @ts-ignore;
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button, Switch, Progress, Alert, AlertDescription, AlertTitle, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useToast } from '@/components/ui';
 // @ts-ignore;
-import { Upload, Eye, EyeOff, Shield, AlertTriangle, CheckCircle, FileText, Video, Image, Download } from 'lucide-react';
+import { Upload, Eye, EyeOff, Shield, AlertTriangle, CheckCircle, FileText, Video, Image, Download, Info } from 'lucide-react';
 
 // @ts-ignore;
 import { FileUploadZone } from '@/components/FileUploadZone';
 // @ts-ignore;
-import { BlurPreview } from '@/components/BlurPreview';
-// @ts-ignore;
+// 移除不存在的 BlurPreview 组件引用
 
 export default function CandidateResumeUpload(props) {
   const [files, setFiles] = useState([]);
@@ -20,6 +19,8 @@ export default function CandidateResumeUpload(props) {
   const [showVideoConsent, setShowVideoConsent] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [consentLog, setConsentLog] = useState(null);
+  const [algorithmVersion, setAlgorithmVersion] = useState('v2.3.1');
+  const [regulationVersion, setRegulationVersion] = useState('EU_AI_Act_2025_v3');
   const {
     toast
   } = useToast();
@@ -40,7 +41,7 @@ export default function CandidateResumeUpload(props) {
   const recordConsent = async (type, details) => {
     try {
       await $w.cloud.callDataSource({
-        dataSourceName: 'consent_log',
+        dataSourceName: 'consent_log_2025',
         methodName: 'wedaCreateV2',
         params: {
           data: {
@@ -48,9 +49,12 @@ export default function CandidateResumeUpload(props) {
             userType: 'candidate',
             userId: $w.auth.currentUser?.userId || 'anonymous',
             regulation: getCurrentRegulation(),
+            regulationVersion: regulationVersion,
+            algorithmVersion: algorithmVersion,
             details: details,
             timestamp: new Date().toISOString(),
-            ipAddress: 'auto-detected'
+            ipAddress: 'auto-detected',
+            userAgent: navigator.userAgent
           }
         }
       });
@@ -60,7 +64,7 @@ export default function CandidateResumeUpload(props) {
   };
 
   // 处理文件上传
-  const handleFileUpload = async uploadedFiles => {
+  const handleFileUpload = uploadedFiles => {
     const newFiles = uploadedFiles.map(file => ({
       id: Date.now() + Math.random(),
       file,
@@ -106,6 +110,7 @@ export default function CandidateResumeUpload(props) {
         formData.append('userId', $w.auth.currentUser?.userId || 'anonymous');
         formData.append('blindMode', blindMode);
         formData.append('regulation', getCurrentRegulation());
+        formData.append('algorithmVersion', algorithmVersion);
 
         // 这里应该调用云存储API
         const result = await uploadToCloudStorage(formData);
@@ -120,7 +125,8 @@ export default function CandidateResumeUpload(props) {
           type: f.type,
           blindMode: blindMode
         })),
-        regulation: getCurrentRegulation()
+        regulation: getCurrentRegulation(),
+        algorithmVersion: algorithmVersion
       });
       toast({
         title: "上传成功",
@@ -132,7 +138,8 @@ export default function CandidateResumeUpload(props) {
         $w.utils.navigateTo({
           pageId: 'candidate-ai-interview',
           params: {
-            regulation: getCurrentRegulation()
+            regulation: getCurrentRegulation(),
+            algorithmVersion: algorithmVersion
           }
         });
       }, 1500);
@@ -198,6 +205,22 @@ export default function CandidateResumeUpload(props) {
           </CardHeader>
           
           <CardContent className="space-y-6">
+            {/* 合规信息展示 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-600">
+                  <Shield className="inline h-4 w-4 mr-1" />
+                  当前算法版本: {algorithmVersion}
+                </p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-lg">
+                <p className="text-sm text-green-600">
+                  <Info className="inline h-4 w-4 mr-1" />
+                  授权法规: {regulationVersion}
+                </p>
+              </div>
+            </div>
+
             {/* 盲选模式开关 */}
             <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
               <div>
@@ -212,7 +235,8 @@ export default function CandidateResumeUpload(props) {
               <Switch checked={blindMode} onCheckedChange={checked => {
               setBlindMode(checked);
               recordConsent('blind_mode', {
-                enabled: checked
+                enabled: checked,
+                algorithmVersion: algorithmVersion
               });
             }} />
             </div>
@@ -306,7 +330,7 @@ export default function CandidateResumeUpload(props) {
                     <ul className="text-sm space-y-1">
                       <li>• 不会进行面部识别或情感分析</li>
                       <li>• 仅提取语音转文字内容</li>
-                      <li> • 所有处理过程符合隐私保护要求</li>
+                      <li>• 所有处理过程符合隐私保护要求</li>
                     </ul>
                   </div>
                 </div>
