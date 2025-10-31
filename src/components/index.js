@@ -28,3 +28,4 @@ export * from './AdminAIChat.jsx';
 export * from './AdminCompliancePanel.jsx';
 export * from './AdminCharts.jsx';
 export * from './AdminDataTable.jsx';
+export * from './SystemHealthCard.jsx';
