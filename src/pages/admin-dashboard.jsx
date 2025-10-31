@@ -1,9 +1,9 @@
 // @ts-ignore;
 import React, { useState, useEffect, useCallback } from 'react';
 // @ts-ignore;
-import { Button, useToast } from '@/components/ui';
+import { Button, useToast, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 // @ts-ignore;
-import { MessageSquare, RefreshCw, Download } from 'lucide-react';
+import { MessageSquare, RefreshCw, Download, Play, TestTube2 } from 'lucide-react';
 
 // @ts-ignore;
 import { AdminSidebar } from '@/components/AdminSidebar';
@@ -25,6 +25,10 @@ import { AdminActivityLog } from '@/components/AdminActivityLog';
 import { SystemHealthCard } from '@/components/SystemHealthCard';
 // @ts-ignore;
 import { cachedCallDataSource, debounce, getSystemHealth } from '@/lib/cache';
+// @ts-ignore;
+import '@/lib/test-utils';
+// @ts-ignore;
+import '@/lib/e2e-tests';
 export default function AdminDashboard(props) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
@@ -65,11 +69,6 @@ export default function AdminDashboard(props) {
   const [exporting, setExporting] = useState(false);
   const [tableData, setTableData] = useState([]);
   const [activityLogs, setActivityLogs] = useState([]);
-  const [cacheStats, setCacheStats] = useState({
-    hitRate: 0,
-    totalRequests: 0,
-    cacheHits: 0
-  });
   const [systemHealth, setSystemHealth] = useState({
     tokenRemaining: 30,
     errorRate: 0,
@@ -77,6 +76,7 @@ export default function AdminDashboard(props) {
     last5MinErrorCount: 0,
     cacheSize: 0
   });
+  const [showTestPanel, setShowTestPanel] = useState(false);
   const {
     toast
   } = useToast();
@@ -84,6 +84,7 @@ export default function AdminDashboard(props) {
     $w
   } = props;
 
+  // ... 保持之前的所有方法不变 ...
   // 防抖刷新函数
   const debouncedRefresh = useCallback(debounce(async () => {
     await fetchDashboardData(true);
@@ -471,6 +472,13 @@ export default function AdminDashboard(props) {
     setSystemHealth(health);
   };
 
+  // 运行测试
+  const runTests = async () => {
+    if (window.E2ETestRunner) {
+      await window.E2ETestRunner.runAllTests();
+    }
+  };
+
   // 防抖筛选变化
   const handleFilterChange = useCallback(debounce(newFilters => {
     setFilters(newFilters);
@@ -628,7 +636,7 @@ export default function AdminDashboard(props) {
   };
 
   // 处理Token刷新
-  const handleRefreshToken = async newToken => {
+  const handleRefreshToken = newToken => {
     toast({
       title: 'Token已刷新',
       description: '系统访问令牌已更新',
@@ -732,8 +740,54 @@ export default function AdminDashboard(props) {
                     <Download className={`h-4 w-4 mr-2 ${exporting ? 'animate-spin' : ''}`} />
                     {exporting ? '导出中...' : '导出数据'}
                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowTestPanel(!showTestPanel)}>
+                    <TestTube2 className="h-4 w-4 mr-2" />
+                    测试工具
+                  </Button>
                 </div>
               </div>
+
+              {/* 测试面板 */}
+              {showTestPanel && <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Play className="h-5 w-5 mr-2" />
+                      测试工具面板
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Button variant="outline" size="sm" onClick={() => window.test?.login()}>
+                        测试登录
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => window.test?.upload()}>
+                        测试上传
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => window.test?.health()}>
+                        测试健康
+                      </Button>
+                      <Button variant="default" size="sm" onClick={runTests}>
+                        运行所有测试
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => window.e2e?.candidate()}>
+                        候选人流程
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => window.e2e?.recruiter()}>
+                        招聘者流程
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => window.e2e?.admin()}>
+                        管理员流程
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => window.e2e?.all()}>
+                        全部E2E测试
+                      </Button>
+                    </div>
+                    <div className="mt-4 text-sm text-gray-600">
+                      <p>开发环境测试工具已加载</p>
+                      <p>使用方法：在浏览器控制台输入 test.all() 或 e2e.all()</p>
+                    </div>
+                  </CardContent>
+                </Card>}
 
               {/* 系统健康卡片 */}
               <div className="mb-6">
