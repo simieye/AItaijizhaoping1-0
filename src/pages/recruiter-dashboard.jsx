@@ -1,32 +1,53 @@
 // @ts-ignore;
 import React, { useState, useEffect, useCallback } from 'react';
 // @ts-ignore;
-import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Progress, useToast } from '@/components/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, useToast, Badge } from '@/components/ui';
 // @ts-ignore;
-import { Users, Briefcase, TrendingUp, MessageSquare, DollarSign, Clock, Eye, RefreshCw } from 'lucide-react';
+import { Plus, Search, Filter, TrendingUp, Users, Briefcase, MessageSquare, RefreshCw } from 'lucide-react';
 
+// @ts-ignore;
+import { RecruiterSidebar } from '@/components/RecruiterSidebar';
+// @ts-ignore;
+import { RecruiterHeader } from '@/components/RecruiterHeader';
 // @ts-ignore;
 import { RecruiterStats } from '@/components/RecruiterStats';
 // @ts-ignore;
-import { JobList } from '@/components/JobList';
-// @ts-ignore;
-import { CandidateMatches } from '@/components/CandidateMatches';
-// @ts-ignore;
-import { cachedCallDataSource, debounce } from '@/lib/cache';
+import { CandidateList } from '@/components/CandidateList';
 // @ts-ignore;
 import { RecruiterAIChat } from '@/components/RecruiterAIChat';
+// @ts-ignore;
+import { cachedCallDataSource } from '@/lib/cache';
 export default function RecruiterDashboard(props) {
-  const [recruiterData, setRecruiterData] = useState(null);
-  const [jobs, setJobs] = useState([]);
-  const [candidates, setCandidates] = useState([]);
-  const [applications, setApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [dashboardData, setDashboardData] = useState({
+    totalJobs: 0,
+    activeJobs: 0,
+    totalApplications: 0,
+    newApplications: 0,
+    totalCandidates: 0,
+    newCandidates: 0,
+    totalMessages: 0,
+    unreadMessages: 0,
+    todayViews: 0,
+    weekViews: 0,
+    monthViews: 0,
+    lastUpdated: new Date().toISOString()
+  });
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [cacheStats, setCacheStats] = useState({
-    hitRate: 0,
-    totalRequests: 0,
-    cacheHits: 0
+  const [activeSection, setActiveSection] = useState('overview');
+  const [jobList, setJobList] = useState([]);
+  const [candidateList, setCandidateList] = useState([]);
+  const [recentApplications, setRecentApplications] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: 10,
+    total: 0
   });
   const {
     toast
@@ -35,111 +56,186 @@ export default function RecruiterDashboard(props) {
     $w
   } = props;
 
-  // 防抖刷新函数
-  const debouncedRefresh = useCallback(debounce(async () => {
-    await fetchRecruiterData(true);
-  }, 300), []);
-
-  // 获取招聘者数据（带缓存）
-  const fetchRecruiterData = async (forceRefresh = false) => {
+  // 获取仪表板数据
+  const fetchDashboardData = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setRefreshing(true);
-
-      // 获取招聘者档案
-      const recruiter = await cachedCallDataSource($w, {
-        dataSourceName: 'recruiter_profile',
-        methodName: 'wedaGetRecordsV2',
-        params: {
-          filter: {
-            where: {
-              email: {
-                $eq: 'recruiter@example.com'
-              }
-            }
-          },
-          select: {
-            $master: true
-          }
-        }
-      }, {
-        forceRefresh
-      });
-
-      // 获取职位列表（带缓存）
-      const jobsResponse = await cachedCallDataSource($w, {
+      const recruiterId = props.$w.auth.currentUser?.userId || 'demo_recruiter';
+      const [jobs, applications, candidates, messages, views] = await Promise.all([
+      // 获取职位数据
+      cachedCallDataSource($w, {
         dataSourceName: 'job_post',
         methodName: 'wedaGetRecordsV2',
         params: {
           filter: {
             where: {
               recruiterId: {
-                $eq: 'recruiter_demo'
+                $eq: recruiterId
               }
             }
           },
-          orderBy: [{
-            createdAt: 'desc'
-          }]
+          getCount: true
         }
       }, {
         forceRefresh
-      });
-
-      // 获取候选人列表（带缓存）
-      const candidatesResponse = await cachedCallDataSource($w, {
-        dataSourceName: 'candidate_profile',
-        methodName: 'wedaGetRecordsV2',
-        params: {
-          filter: {
-            where: {
-              status: {
-                $eq: 'active'
-              }
-            }
-          },
-          orderBy: [{
-            matchScore: 'desc'
-          }],
-          pageSize: 10
-        }
-      }, {
-        forceRefresh
-      });
-
-      // 获取申请记录（带缓存）
-      const applicationsResponse = await cachedCallDataSource($w, {
+      }),
+      // 获取申请数据
+      cachedCallDataSource($w, {
         dataSourceName: 'application',
         methodName: 'wedaGetRecordsV2',
         params: {
           filter: {
             where: {
               recruiterId: {
-                $eq: 'recruiter_demo'
+                $eq: recruiterId
               }
             }
           },
-          orderBy: [{
-            createdAt: 'desc'
-          }]
+          getCount: true
+        }
+      }, {
+        forceRefresh
+      }),
+      // 获取候选人数据
+      cachedCallDataSource($w, {
+        dataSourceName: 'candidate_profile',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          getCount: true
+        }
+      }, {
+        forceRefresh
+      }),
+      // 获取消息数据
+      cachedCallDataSource($w, {
+        dataSourceName: 'chat_message',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              recipientId: {
+                $eq: recruiterId
+              }
+            }
+          },
+          getCount: true
+        }
+      }, {
+        forceRefresh
+      }),
+      // 获取视图数据（模拟）
+      Promise.resolve({
+        today: 45,
+        week: 312,
+        month: 1248
+      })]);
+
+      // 获取活跃职位
+      const activeJobs = await cachedCallDataSource($w, {
+        dataSourceName: 'job_post',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              $and: [{
+                recruiterId: {
+                  $eq: recruiterId
+                }
+              }, {
+                status: {
+                  $eq: 'active'
+                }
+              }]
+            }
+          },
+          getCount: true
         }
       }, {
         forceRefresh
       });
-      setRecruiterData(recruiter.records?.[0] || {
-        name: '张招聘者',
-        email: 'recruiter@example.com',
-        company: '示例公司',
-        position: '高级招聘经理'
-      });
-      setJobs(jobsResponse.records || []);
-      setCandidates(candidatesResponse.records || []);
-      setApplications(applicationsResponse.records || []);
 
-      // 更新缓存统计
-      updateCacheStats();
+      // 获取新申请
+      const newApplications = await cachedCallDataSource($w, {
+        dataSourceName: 'application',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              $and: [{
+                recruiterId: {
+                  $eq: recruiterId
+                }
+              }, {
+                createdAt: {
+                  $gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+                }
+              }]
+            }
+          },
+          getCount: true
+        }
+      }, {
+        forceRefresh
+      });
+
+      // 获取新候选人
+      const newCandidates = await cachedCallDataSource($w, {
+        dataSourceName: 'candidate_profile',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              createdAt: {
+                $gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+              }
+            }
+          },
+          getCount: true
+        }
+      }, {
+        forceRefresh
+      });
+
+      // 获取未读消息
+      const unreadMessages = await cachedCallDataSource($w, {
+        dataSourceName: 'chat_message',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              $and: [{
+                recipientId: {
+                  $eq: recruiterId
+                }
+              }, {
+                isRead: {
+                  $eq: false
+                }
+              }]
+            }
+          },
+          getCount: true
+        }
+      }, {
+        forceRefresh
+      });
+      setDashboardData({
+        totalJobs: jobs.total || 0,
+        activeJobs: activeJobs.total || 0,
+        totalApplications: applications.total || 0,
+        newApplications: newApplications.total || 0,
+        totalCandidates: candidates.total || 0,
+        newCandidates: newCandidates.total || 0,
+        totalMessages: messages.total || 0,
+        unreadMessages: unreadMessages.total || 0,
+        todayViews: views.today,
+        weekViews: views.week,
+        monthViews: views.month,
+        lastUpdated: new Date().toISOString()
+      });
     } catch (error) {
-      console.error('获取数据失败:', error);
+      console.error('获取仪表板数据失败:', error);
       toast({
         title: '获取数据失败',
         description: error.message || '无法加载数据，请重试',
@@ -151,280 +247,375 @@ export default function RecruiterDashboard(props) {
     }
   };
 
-  // 更新缓存统计
-  const updateCacheStats = () => {
-    setCacheStats(prev => ({
-      ...prev,
-      totalRequests: prev.totalRequests + 1
-    }));
+  // 获取职位列表
+  const fetchJobList = async (forceRefresh = false) => {
+    try {
+      const recruiterId = props.$w.auth.currentUser?.userId || 'demo_recruiter';
+      const response = await cachedCallDataSource($w, {
+        dataSourceName: 'job_post',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              recruiterId: {
+                $eq: recruiterId
+              }
+            }
+          },
+          orderBy: [{
+            [sortBy]: sortOrder
+          }],
+          pageSize: pagination.pageSize,
+          pageNumber: pagination.page,
+          select: {
+            $master: true
+          }
+        }
+      }, {
+        forceRefresh
+      });
+      setJobList(response.records || []);
+      setPagination(prev => ({
+        ...prev,
+        total: response.total || 0
+      }));
+    } catch (error) {
+      console.error('获取职位列表失败:', error);
+      toast({
+        title: '获取职位列表失败',
+        description: error.message || '无法加载职位数据',
+        variant: 'destructive'
+      });
+      setJobList([]);
+    }
   };
 
-  // 计算统计数据
-  const stats = {
-    totalJobs: jobs.length,
-    activeJobs: jobs.filter(job => job.status === 'active').length,
-    totalApplications: applications.length,
-    pendingApplications: applications.filter(app => app.status === 'pending').length,
-    acceptedApplications: applications.filter(app => app.status === 'accepted').length,
-    averageMatchScore: candidates.length > 0 ? Math.round(candidates.reduce((sum, candidate) => sum + (candidate.matchScore || 0), 0) / candidates.length) : 0
+  // 获取候选人列表
+  const fetchCandidateList = async (forceRefresh = false) => {
+    try {
+      const response = await cachedCallDataSource($w, {
+        dataSourceName: 'candidate_profile',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: searchQuery ? {
+              $or: [{
+                name: {
+                  $search: searchQuery
+                }
+              }, {
+                email: {
+                  $search: searchQuery
+                }
+              }]
+            } : {}
+          },
+          orderBy: [{
+            createdAt: 'desc'
+          }],
+          pageSize: 10,
+          select: {
+            $master: true
+          }
+        }
+      }, {
+        forceRefresh
+      });
+      setCandidateList(response.records || []);
+    } catch (error) {
+      console.error('获取候选人列表失败:', error);
+      toast({
+        title: '获取候选人列表失败',
+        description: error.message || '无法加载候选人数据',
+        variant: 'destructive'
+      });
+      setCandidateList([]);
+    }
   };
 
-  // 防抖搜索候选人
-  const debouncedSearchCandidates = useCallback(debounce(async searchTerm => {
-    if (!searchTerm.trim()) {
-      await fetchRecruiterData(true);
-      return;
-    }
-    const response = await cachedCallDataSource($w, {
-      dataSourceName: 'candidate_profile',
-      methodName: 'wedaGetRecordsV2',
-      params: {
-        filter: {
-          where: {
-            $or: [{
-              name: {
-                $search: searchTerm
+  // 获取最近申请
+  const fetchRecentApplications = async (forceRefresh = false) => {
+    try {
+      const recruiterId = props.$w.auth.currentUser?.userId || 'demo_recruiter';
+      const response = await cachedCallDataSource($w, {
+        dataSourceName: 'application',
+        methodName: 'wedaGetRecordsV2',
+        params: {
+          filter: {
+            where: {
+              recruiterId: {
+                $eq: recruiterId
               }
-            }, {
-              skills: {
-                $search: searchTerm
-              }
-            }, {
-              targetPosition: {
-                $search: searchTerm
-              }
-            }]
+            }
+          },
+          orderBy: [{
+            createdAt: 'desc'
+          }],
+          pageSize: 5,
+          select: {
+            $master: true
           }
-        },
-        orderBy: [{
-          matchScore: 'desc'
-        }],
-        pageSize: 10
-      }
-    });
-    setCandidates(response.records || []);
-  }, 300), []);
-
-  // 防抖搜索职位
-  const debouncedSearchJobs = useCallback(debounce(async searchTerm => {
-    if (!searchTerm.trim()) {
-      await fetchRecruiterData(true);
-      return;
+        }
+      }, {
+        forceRefresh
+      });
+      setRecentApplications(response.records || []);
+    } catch (error) {
+      console.error('获取最近申请失败:', error);
+      setRecentApplications([]);
     }
-    const response = await cachedCallDataSource($w, {
-      dataSourceName: 'job_post',
-      methodName: 'wedaGetRecordsV2',
-      params: {
-        filter: {
-          where: {
-            $or: [{
-              title: {
-                $search: searchTerm
-              }
-            }, {
-              description: {
-                $search: searchTerm
-              }
-            }, {
-              location: {
-                $search: searchTerm
-              }
-            }]
-          }
-        },
-        orderBy: [{
-          createdAt: 'desc'
-        }]
-      }
-    });
-    setJobs(response.records || []);
-  }, 300), []);
-
-  // 处理刷新
-  const handleRefresh = async () => {
-    await fetchRecruiterData(true);
-    toast({
-      title: '数据已刷新',
-      description: '所有数据已从服务器重新获取'
-    });
   };
 
   // 处理搜索
-  const handleSearch = (type, searchTerm) => {
-    if (type === 'candidates') {
-      debouncedSearchCandidates(searchTerm);
-    } else if (type === 'jobs') {
-      debouncedSearchJobs(searchTerm);
-    }
+  const handleSearch = query => {
+    setSearchQuery(query);
+    // 防抖搜索将在useEffect中处理
   };
+
+  // 处理筛选
+  const handleFilter = status => {
+    setFilterStatus(status);
+    setPagination(prev => ({
+      ...prev,
+      page: 1
+    }));
+  };
+
+  // 处理排序
+  const handleSort = (field, order) => {
+    setSortBy(field);
+    setSortOrder(order);
+  };
+
+  // 处理分页
+  const handlePageChange = page => {
+    setPagination(prev => ({
+      ...prev,
+      page
+    }));
+  };
+
+  // 处理刷新
+  const handleRefresh = async () => {
+    await fetchDashboardData(true);
+    await fetchJobList(true);
+    await fetchCandidateList(true);
+    await fetchRecentApplications(true);
+  };
+
+  // 处理导航
+  const handleNavigation = (pageId, params = {}) => {
+    $w.utils.navigateTo({
+      pageId,
+      params
+    });
+  };
+
+  // 处理创建职位
+  const handleCreateJob = () => {
+    handleNavigation('recruiter-job-post');
+  };
+
+  // 处理查看候选人详情
+  const handleViewCandidate = candidateId => {
+    handleNavigation('recruiter-candidate-detail', {
+      candidateId
+    });
+  };
+
+  // 处理查看职位详情
+  const handleViewJob = jobId => {
+    handleNavigation('recruiter-job-detail', {
+      jobId
+    });
+  };
+
+  // 初始化数据
   useEffect(() => {
-    fetchRecruiterData();
+    fetchDashboardData();
+    fetchJobList();
+    fetchCandidateList();
+    fetchRecentApplications();
   }, []);
+
+  // 监听分页变化
+  useEffect(() => {
+    fetchJobList();
+  }, [pagination.page, sortBy, sortOrder]);
+
+  // 监听搜索变化
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchCandidateList();
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 py-8">
-        <style jsx>{`
-          body {
-            background: #f9fafb;
-          }
-        `}</style>
-        
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3, 4].map(i => <Card key={i} className="h-32 bg-gray-200"></Card>)}
-            </div>
-          </div>
-        </div>
-      </div>;
-  }
-  return <div className="min-h-screen bg-gray-50 py-8">
+    return <div className="min-h-screen bg-gray-50">
       <style jsx>{`
         body {
           background: #f9fafb;
         }
       `}</style>
-      
-      <div className="max-w-7xl mx-auto px-4">
-        {/* 缓存状态指示器 */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            缓存命中率: {cacheStats.hitRate}% | 总请求: {cacheStats.totalRequests}
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? '刷新中...' : '刷新数据'}
-          </Button>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-32 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-64"></div>
         </div>
+      </div>
+    </div>;
+  }
+  return <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <style jsx>{`
+        body {
+          background: #f9fafb;
+        }
+        .dark body {
+          background: #111827;
+        }
+      `}</style>
 
-        {/* 欢迎区域 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            欢迎回来，{recruiterData?.name || '招聘者'}！
-          </h1>
-          <p className="text-gray-600">
-            {recruiterData?.company || '示例公司'} - {recruiterData?.position || '招聘经理'}
-          </p>
-        </div>
+      <div className="flex h-screen">
+        {/* 侧边栏 */}
+        <RecruiterSidebar isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} onNavigate={handleNavigation} activeSection={activeSection} onSectionChange={setActiveSection} />
 
-        {/* 统计卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">总职位数</p>
-                  <p className="text-2xl font-bold">{stats.totalJobs}</p>
-                </div>
-                <Briefcase className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">活跃职位</p>
-                  <p className="text-2xl font-bold">{stats.activeJobs}</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">总申请</p>
-                  <p className="text-2xl font-bold">{stats.totalApplications}</p>
-                </div>
-                <Users className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">平均匹配度</p>
-                  <p className="text-2xl font-bold">{stats.averageMatchScore}%</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* 主内容区域 */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* 顶部导航 */}
+          <RecruiterHeader onSearch={handleSearch} onNotificationClick={notification => {
+          toast({
+            title: notification.title,
+            description: notification.message
+          });
+        }} onSettingsClick={action => {
+          if (action === 'logout') {
+            $w.utils.navigateTo({
+              pageId: 'login'
+            });
+          } else {
+            $w.utils.navigateTo({
+              pageId: `recruiter-${action}`
+            });
+          }
+        }} />
 
-        {/* 主要内容区域 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 左侧：职位管理 */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>我的职位</span>
-                  <Button size="sm" onClick={() => props.$w.utils.navigateTo({
-                  pageId: 'recruiter-job-post'
-                })}>
-                    发布新职位
+          {/* 主内容 */}
+          <main className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-7xl mx-auto">
+              {/* 页面标题和操作 */}
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    招聘者仪表板
+                  </h1>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    管理您的职位和候选人
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button variant="outline" size="sm" onClick={handleRefresh}>
+                    <RefreshCw className={`h-4 w-4 mr-2`} />
+                    刷新
                   </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <JobList jobs={jobs} onSearch={handleSearch} onViewDetails={job => {
-                console.log('查看职位详情:', job);
-              }} onEdit={job => {
-                console.log('编辑职位:', job);
-              }} />
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* 右侧：候选人推荐 */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>候选人推荐</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CandidateMatches candidates={candidates} onSearch={handleSearch} onViewProfile={candidate => {
-                console.log('查看候选人档案:', candidate);
-              }} onContact={candidate => {
-                console.log('联系候选人:', candidate);
-              }} />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* 申请追踪 */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>申请追踪</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {applications.slice(0, 5).map(app => <div key={app._id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{app.candidateName || '候选人'}</p>
-                      <p className="text-sm text-gray-600">{app.jobTitle || '职位'}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={app.status === 'pending' ? 'warning' : app.status === 'accepted' ? 'success' : 'secondary'}>
-                        {app.status || '待处理'}
-                      </Badge>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>)}
+                  <Button onClick={handleCreateJob}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    发布职位
+                  </Button>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* 统计卡片 */}
+              <RecruiterStats data={dashboardData} onStatClick={stat => {
+              console.log('点击统计:', stat);
+              if (stat.type === 'jobs') {
+                setActiveSection('jobs');
+              } else if (stat.type === 'candidates') {
+                setActiveSection('candidates');
+              }
+            }} />
+
+              {/* 主要内容区域 */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                {/* 左侧：职位列表 */}
+                <div className="lg:col-span-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>我的职位</span>
+                        <Badge variant="outline">{dashboardData.activeJobs} 个活跃</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {jobList.length > 0 ? jobList.map(job => <div key={job._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewJob(job._id)}>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="font-semibold text-lg">{job.title}</h3>
+                                <p className="text-sm text-gray-600">{job.location}</p>
+                                <p className="text-sm text-gray-500">{job.salary}</p>
+                              </div>
+                              <div className="text-right">
+                                <Badge variant={job.status === 'active' ? 'success' : 'secondary'}>
+                                  {job.status === 'active' ? '招聘中' : '已关闭'}
+                                </Badge>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {job.applicationCount || 0} 个申请
+                                </p>
+                              </div>
+                            </div>
+                          </div>) : <div className="text-center py-8 text-gray-500">
+                          <Briefcase className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <p>暂无职位，立即发布您的第一个职位吧！</p>
+                        </div>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* 右侧：候选人列表 */}
+                <div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>最新候选人</span>
+                        <Badge variant="outline">{dashboardData.totalCandidates} 位</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CandidateList candidates={candidateList} onCandidateClick={handleViewCandidate} />
+                    </CardContent>
+                  </Card>
+
+                  {/* 最近申请 */}
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>最近申请</span>
+                        <Badge variant="outline">{dashboardData.newApplications} 个新申请</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {recentApplications.length > 0 ? recentApplications.map(app => <div key={app._id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <Users className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium">{app.candidateName || '匿名候选人'}</p>
+                              <p className="text-sm text-gray-600">{app.jobTitle || '职位申请'}</p>
+                            </div>
+                            <Badge variant="outline">{app.status || '待处理'}</Badge>
+                          </div>) : <div className="text-center py-6 text-gray-500">
+                          <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                          <p className="text-sm">暂无新申请</p>
+                        </div>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          </main>
         </div>
       </div>
 
@@ -434,11 +625,6 @@ export default function RecruiterDashboard(props) {
       </Button>
 
       {/* AI客服抽屉 */}
-      <RecruiterAIChat isOpen={aiChatOpen} onClose={() => setAiChatOpen(false)} userId={recruiterData?.email || 'recruiter_dashboard'} userName={recruiterData?.name || '招聘者'} onMessageSent={(userMsg, botMsg) => {
-      console.log('招聘者仪表板AI对话:', {
-        user: userMsg,
-        bot: botMsg
-      });
-    }} />
+      <RecruiterAIChat isOpen={aiChatOpen} onClose={() => setAiChatOpen(false)} userId={props.$w.auth.currentUser?.userId || 'recruiter_demo'} userName={props.$w.auth.currentUser?.name || '招聘者'} />
     </div>;
 }
