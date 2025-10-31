@@ -1,0 +1,113 @@
+
+[
+  {
+    "_id": "dei_001",
+    "metricId": "aa0e8400-e29b-41d4-a716-446655440001",
+    "entityType": "candidate",
+    "entityId": "550e8400-e29b-41d4-a716-446655440001",
+    "dimension": "gender",
+    "value": "female",
+    "percentage": 45.5,
+    "snapshotDate": 1730313600000,
+    "benchmark": 40.0,
+    "trend": "increasing",
+    "source": "user_profile",
+    "benchmarkDelta": 5.5,
+    "confidenceInterval": {
+      "lower": 43.2,
+      "upper": 47.8
+    },
+    "sampleSize": 1250,
+    "statisticalSignificance": 0.95,
+    "methodology": "stratified_sampling",
+    "lastUpdated": 1730313600000
+  },
+  {
+    "_id": "dei_002",
+    "metricId": "aa0e8400-e29b-41d4-a716-446655440002",
+    "entityType": "job_post",
+    "entityId": "660e8400-e29b-41d4-a716-446655440001",
+    "dimension": "race",
+    "value": "asian",
+    "percentage": 35.2,
+    "snapshotDate": 1730313600000,
+    "benchmark": 30.0,
+    "trend": "stable",
+    "source": "application_data",
+    "benchmarkDelta": 5.2,
+    "confidenceInterval": {
+      "lower": 33.1,
+      "upper": 37.3
+    },
+    "sampleSize": 890,
+    "statisticalSignificance": 0.92,
+    "methodology": "demographic_analysis",
+    "lastUpdated": 1730313600000
+  },
+  {
+    "_id": "dei_003",
+    "metricId": "aa0e8400-e29b-41d4-a716-446655440003",
+    "entityType": "company",
+    "entityId": "腾讯科技",
+    "dimension": "disability",
+    "value": "prefer_not_to_say",
+    "percentage": 8.5,
+    "snapshotDate": 1730313600000,
+    "benchmark": 5.0,
+    "trend": "increasing",
+    "source": "hr_report",
+    "benchmarkDelta": 3.5,
+    "confidenceInterval": {
+      "lower": 7.2,
+      "upper": 9.8
+    },
+    "sampleSize": 2100,
+    "statisticalSignificance": 0.98,
+    "methodology": "voluntary_disclosure",
+    "lastUpdated": 1730313600000
+  },
+  {
+    "_id": "dei_004",
+    "metricId": "aa0e8400-e29b-41d4-a716-446655440004",
+    "entityType": "candidate",
+    "entityId": "550e8400-e29b-41d4-a716-446655440003",
+    "dimension": "age",
+    "value": "25-34",
+    "percentage": 42.3,
+    "snapshotDate": 1730313600000,
+    "benchmark": 38.0,
+    "trend": "decreasing",
+    "source": "demographic_survey",
+    "benchmarkDelta": 4.3,
+    "confidenceInterval": {
+      "lower": 40.1,
+      "upper": 44.5
+    },
+    "sampleSize": 1560,
+    "statisticalSignificance": 0.94,
+    "methodology": "age_group_analysis",
+    "lastUpdated": 1730313600000
+  },
+  {
+    "_id": "dei_005",
+    "metricId": "aa0e8400-e29b-41d4-a716-446655440005",
+    "entityType": "job_post",
+    "entityId": "660e8400-e29b-41d4-a716-446655440002",
+    "dimension": "gender",
+    "value": "non_binary",
+    "percentage": 3.2,
+    "snapshotDate": 1730313600000,
+    "benchmark": 2.0,
+    "trend": "increasing",
+    "source": "inclusive_hiring",
+    "benchmarkDelta": 1.2,
+    "confidenceInterval": {
+      "lower": 2.8,
+      "upper": 3.6
+    },
+    "sampleSize": 650,
+    "statisticalSignificance": 0.89,
+    "methodology": "inclusive_recruitment_tracking",
+    "lastUpdated": 1730313600000
+  }
+]

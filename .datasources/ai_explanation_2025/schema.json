@@ -1,0 +1,87 @@
+
+{
+  "name": "ai_explanation",
+  "title": "AI决策解释2025扩展版",
+  "schemas": [
+    {
+      "name": "explanationId",
+      "title": "解释ID",
+      "type": "String"
+    },
+    {
+      "name": "applicationId",
+      "title": "申请ID",
+      "type": "String"
+    },
+    {
+      "name": "decisionType",
+      "title": "决策类型",
+      "type": "String"
+    },
+    {
+      "name": "factors",
+      "title": "决策因素",
+      "type": "Object"
+    },
+    {
+      "name": "humanOverride",
+      "title": "人工覆盖",
+      "type": "Boolean"
+    },
+    {
+      "name": "confidenceScore",
+      "title": "置信度评分",
+      "type": "Number"
+    },
+    {
+      "name": "explanationText",
+      "title": "解释文本",
+      "type": "String"
+    },
+    {
+      "name": "algorithmVersion",
+      "title": "算法版本",
+      "type": "String"
+    },
+    {
+      "name": "reviewerId",
+      "title": "审核员ID",
+      "type": "String"
+    },
+    {
+      "name": "reviewNotes",
+      "title": "审核备注",
+      "type": "String"
+    },
+    {
+      "name": "modelConfidence",
+      "title": "模型置信度",
+      "type": "Number"
+    },
+    {
+      "name": "featureImportance",
+      "title": "特征重要性",
+      "type": "Object"
+    },
+    {
+      "name": "counterfactuals",
+      "title": "反事实分析",
+      "type": "Array"
+    },
+    {
+      "name": "fairnessMetrics",
+      "title": "公平性指标",
+      "type": "Object"
+    },
+    {
+      "name": "explainabilityScore",
+      "title": "可解释性评分",
+      "type": "Number"
+    },
+    {
+      "name": "regulationCompliance",
+      "title": "法规合规性",
+      "type": "Object"
+    }
+  ]
+}

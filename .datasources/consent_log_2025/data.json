@@ -1,0 +1,176 @@
+
+[
+  {
+    "_id": "consent_001",
+    "consentId": "cc0e8400-e29b-41d4-a716-446655440001",
+    "userId": "550e8400-e29b-41d4-a716-446655440001",
+    "consentType": "ai_analysis",
+    "scope": {
+      "resume_analysis": true,
+      "skill_matching": true,
+      "video_interview": true,
+      "emotion_recognition": false,
+      "bias_detection": true,
+      "data_retention_days": 365
+    },
+    "ip": "203.205.128.33",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "withdrawable": true,
+    "withdrawn": false,
+    "withdrawnAt": null,
+    "consentText": "我同意AI系统分析我的简历、技能匹配和视频面试内容，但不同意情感识别功能。数据保留期为365天，可随时撤回授权。",
+    "regulation": "EU_AI_Act",
+    "regulationVersion": "EU_AI_Act_2025_v3",
+    "consentVersion": "v2.1.0",
+    "validityPeriod": {
+      "start": "2025-01-01T00:00:00Z",
+      "end": "2025-12-31T23:59:59Z"
+    },
+    "consentLanguage": "zh-CN",
+    "consentMethod": "explicit_click",
+    "consentEvidence": {
+      "timestamp": "2025-01-01T10:30:00Z",
+      "ip": "203.205.128.33",
+      "userAgent": "Mozilla/5.0...",
+      "screenResolution": "1920x1080",
+      "timezone": "Asia/Shanghai"
+    },
+    "jurisdiction": "EU",
+    "dataRetention": {
+      "period": "365_days",
+      "purpose": "recruitment_analysis",
+      "anonymization": true
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "consent_002",
+    "consentId": "cc0e8400-e29b-41d4-a716-446655440002",
+    "userId": "550e8400-e29b-41d4-a716-446655440001",
+    "consentType": "data_sharing",
+    "scope": {
+      "third_party_sharing": false,
+      "internal_use": true,
+      "anonymized_data": true,
+      "marketing_use": false,
+      "research_use": true
+    },
+    "ip": "203.205.128.33",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "withdrawable": true,
+    "withdrawn": false,
+    "withdrawnAt": null,
+    "consentText": "我同意在匿名化处理后，将我的数据用于内部优化和研究目的，但不同意与第三方共享或用于营销目的。",
+    "regulation": "GDPR",
+    "regulationVersion": "GDPR_2025_v2.1",
+    "consentVersion": "v1.8.5",
+    "validityPeriod": {
+      "start": "2025-01-01T00:00:00Z",
+      "end": "2025-12-31T23:59:59Z"
+    },
+    "consentLanguage": "zh-CN",
+    "consentMethod": "checkbox",
+    "consentEvidence": {
+      "timestamp": "2025-01-01T10:31:00Z",
+      "ip": "203.205.128.33",
+      "userAgent": "Mozilla/5.0...",
+      "screenResolution": "1920x1080",
+      "timezone": "Asia/Shanghai"
+    },
+    "jurisdiction": "EU",
+    "dataRetention": {
+      "period": "730_days",
+      "purpose": "research_improvement",
+      "anonymization": true
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "consent_003",
+    "consentId": "cc0e8400-e29b-41d4-a716-446655440003",
+    "userId": "550e8400-e29b-41d4-a716-446655440002",
+    "consentType": "cookies",
+    "scope": {
+      "essential_cookies": true,
+      "analytics_cookies": true,
+      "marketing_cookies": false,
+      "third_party_cookies": false,
+      "cookie_duration_days": 90
+    },
+    "ip": "116.25.156.33",
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)",
+    "withdrawable": true,
+    "withdrawn": false,
+    "withdrawnAt": null,
+    "consentText": "根据中国个人信息保护法，我同意使用必要的和分析性Cookie，但不同意营销Cookie和第三方Cookie。Cookie有效期为90天。",
+    "regulation": "China_PIPL",
+    "regulationVersion": "China_PIPL_2025_v1.2",
+    "consentVersion": "v1.5.0",
+    "validityPeriod": {
+      "start": "2025-01-01T00:00:00Z",
+      "end": "2025-12-31T23:59:59Z"
+    },
+    "consentLanguage": "zh-CN",
+    "consentMethod": "banner_accept",
+    "consentEvidence": {
+      "timestamp": "2025-01-01T10:32:00Z",
+      "ip": "116.25.156.33",
+      "userAgent": "Mozilla/5.0...",
+      "screenResolution": "375x812",
+      "timezone": "Asia/Shanghai"
+    },
+    "jurisdiction": "CN",
+    "dataRetention": {
+      "period": "90_days",
+      "purpose": "website_functionality",
+      "anonymization": false
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "consent_004",
+    "consentId": "cc0e8400-e29b-41d4-a716-446655440004",
+    "userId": "550e8400-e29b-41d4-a716-446655440003",
+    "consentType": "ai_analysis",
+    "scope": {
+      "resume_parsing": true,
+      "skill_extraction": true,
+      "interview_analysis": true,
+      "bias_detection": true,
+      "zip_code_proxy": false
+    },
+    "ip": "8.8.8.8",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    "withdrawable": true,
+    "withdrawn": true,
+    "withdrawnAt": 1730400000000,
+    "consentText": "我同意AI分析我的简历和面试表现，但要求禁用ZIP码代理功能以符合US州级隐私法规。",
+    "regulation": "US_EEOC",
+    "regulationVersion": "US_EEOC_2025_v3.1",
+    "consentVersion": "v2.0.1",
+    "validityPeriod": {
+      "start": "2025-01-01T00:00:00Z",
+      "end": "2025-06-30T23:59:59Z"
+    },
+    "consentLanguage": "en-US",
+    "consentMethod": "explicit_click",
+    "consentEvidence": {
+      "timestamp": "2025-01-01T10:33:00Z",
+      "ip": "8.8.8.8",
+      "userAgent": "Mozilla/5.0...",
+      "screenResolution": "2560x1440",
+      "timezone": "America/New_York"
+    },
+    "jurisdiction": "US",
+    "dataRetention": {
+      "period": "180_days",
+      "purpose": "bias_detection",
+      "anonymization": true
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730400000000
+  }
+]

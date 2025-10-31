@@ -1,0 +1,109 @@
+
+[
+  {
+    "_id": "audit_001",
+    "auditId": "990e8400-e29b-41d4-a716-446655440001",
+    "entityType": "job_post",
+    "entityId": "660e8400-e29b-41d4-a716-446655440001",
+    "regulation": "EU_AI_Act",
+    "auditType": "bias_risk",
+    "score": 92,
+    "details": {
+      "biasWords": [
+        {
+          "word": "aggressive",
+          "suggestion": "assertive",
+          "severity": "high"
+        },
+        {
+          "word": "rockstar",
+          "suggestion": "experienced professional",
+          "severity": "medium"
+        }
+      ],
+      "recommendations": [
+        "使用中性语言描述职位要求",
+        "避免年龄相关词汇",
+        "增加包容性描述"
+      ]
+    },
+    "operatorId": "550e8400-e29b-41d4-a716-446655440002",
+    "status": "passed",
+    "notes": "已通过EU AI Act偏见检测",
+    "algorithmVersion": "v2.3.1",
+    "modelHash": "sha256:a1b2c3d4e5f6",
+    "trainingDataVersion": "2025-Q1",
+    "biasThreshold": 0.15,
+    "performanceMetrics": {
+      "precision": 0.94,
+      "recall": 0.89,
+      "f1Score": 0.915
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "audit_002",
+    "auditId": "990e8400-e29b-41d4-a716-446655440002",
+    "entityType": "application",
+    "entityId": "770e8400-e29b-41d4-a716-446655440001",
+    "regulation": "US_EEOC",
+    "auditType": "fria_template",
+    "score": 88,
+    "details": {
+      "algorithmTransparency": true,
+      "humanReviewRequired": true,
+      "biasMitigation": [
+        "技能权重调整",
+        "经验年限标准化",
+        "教育背景去偏见"
+      ]
+    },
+    "operatorId": "550e8400-e29b-41d4-a716-446655440002",
+    "status": "reviewed",
+    "notes": "需要人工复核高风险候选人",
+    "algorithmVersion": "v2.3.1",
+    "modelHash": "sha256:a1b2c3d4e5f6",
+    "trainingDataVersion": "2025-Q1",
+    "biasThreshold": 0.12,
+    "performanceMetrics": {
+      "precision": 0.91,
+      "recall": 0.87,
+      "f1Score": 0.89
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "audit_003",
+    "auditId": "990e8400-e29b-41d4-a716-446655440003",
+    "entityType": "ai_interview",
+    "entityId": "880e8400-e29b-41d4-a716-446655440001",
+    "regulation": "China_CAC",
+    "auditType": "content_filter",
+    "score": 95,
+    "details": {
+      "contentChecks": [
+        "政治敏感内容检测",
+        "暴力内容过滤",
+        "隐私信息保护"
+      ],
+      "dataLocalization": true,
+      "userConsent": true
+    },
+    "operatorId": "550e8400-e29b-41d4-a716-446655440002",
+    "status": "compliant",
+    "notes": "符合中国内容审查要求",
+    "algorithmVersion": "v2.2.8",
+    "modelHash": "sha256:g7h8i9j0k1l2",
+    "trainingDataVersion": "2025-Q1-CN",
+    "biasThreshold": 0.08,
+    "performanceMetrics": {
+      "precision": 0.97,
+      "recall": 0.93,
+      "f1Score": 0.95
+    },
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  }
+]

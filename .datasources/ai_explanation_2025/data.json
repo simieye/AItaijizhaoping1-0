@@ -1,0 +1,187 @@
+
+[
+  {
+    "_id": "exp_001",
+    "explanationId": "bb0e8400-e29b-41d4-a716-446655440001",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440001",
+    "decisionType": "match_score",
+    "factors": {
+      "skill_match": {
+        "python": 0.95,
+        "react": 0.88,
+        "nodejs": 0.92
+      },
+      "experience_years": {
+        "score": 0.85,
+        "weight": 0.3
+      },
+      "education": {
+        "score": 0.9,
+        "weight": 0.2
+      },
+      "location": {
+        "score": 0.8,
+        "weight": 0.1
+      },
+      "salary_expectation": {
+        "score": 0.75,
+        "weight": 0.15
+      },
+      "company_culture": {
+        "score": 0.88,
+        "weight": 0.25
+      }
+    },
+    "humanOverride": false,
+    "confidenceScore": 87.5,
+    "explanationText": "基于技能匹配度、经验年限、教育背景、地理位置、薪资期望和公司文化匹配度综合评估，该候选人与职位匹配度为87.5%。主要优势在于Python技能高度匹配，React和Node.js技能也达到要求。",
+    "algorithmVersion": "v2.3.1",
+    "reviewerId": "550e8400-e29b-41d4-a716-446655440002",
+    "reviewNotes": "AI评估结果合理，无需人工调整",
+    "modelConfidence": 0.92,
+    "featureImportance": {
+      "python": 0.35,
+      "react": 0.25,
+      "nodejs": 0.2,
+      "experience": 0.15,
+      "education": 0.05
+    },
+    "counterfactuals": [
+      {
+        "change": "增加2年经验",
+        "impact": "+8.5%",
+        "explanation": "经验年限增加会显著提升匹配度"
+      },
+      {
+        "change": "调整薪资期望",
+        "impact": "+3.2%",
+        "explanation": "薪资期望与职位范围更匹配"
+      }
+    ],
+    "fairnessMetrics": {
+      "demographicParity": 0.89,
+      "equalizedOdds": 0.91,
+      "calibration": 0.93
+    },
+    "explainabilityScore": 0.94,
+    "regulationCompliance": {
+      "EU_AI_Act": true,
+      "US_EEOC": true,
+      "China_CAC": true
+    },
+    "createdAt": 1730313600000
+  },
+  {
+    "_id": "exp_002",
+    "explanationId": "bb0e8400-e29b-41d4-a716-446655440002",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440002",
+    "decisionType": "interview_rating",
+    "factors": {
+      "technical_skills": {
+        "score": 8.5,
+        "weight": 0.4
+      },
+      "communication": {
+        "score": 9.0,
+        "weight": 0.3
+      },
+      "problem_solving": {
+        "score": 8.8,
+        "weight": 0.2
+      },
+      "cultural_fit": {
+        "score": 8.2,
+        "weight": 0.1
+      }
+    },
+    "humanOverride": true,
+    "confidenceScore": 85.5,
+    "explanationText": "AI面试评估显示候选人在技术技能、沟通能力、问题解决和文化适应方面表现优秀。但人工审核发现候选人在团队协作方面表现更突出，因此将最终评分从85.5调整为90.0。",
+    "algorithmVersion": "v2.3.1",
+    "reviewerId": "550e8400-e29b-41d4-a716-446655440002",
+    "reviewNotes": "人工调整：团队协作能力加分",
+    "modelConfidence": 0.88,
+    "featureImportance": {
+      "technical_skills": 0.4,
+      "communication": 0.3,
+      "problem_solving": 0.2,
+      "cultural_fit": 0.1
+    },
+    "counterfactuals": [
+      {
+        "change": "提高沟通评分",
+        "impact": "+2.5%",
+        "explanation": "沟通能力提升会显著影响整体评分"
+      }
+    ],
+    "fairnessMetrics": {
+      "demographicParity": 0.92,
+      "equalizedOdds": 0.94,
+      "calibration": 0.91
+    },
+    "explainabilityScore": 0.96,
+    "regulationCompliance": {
+      "EU_AI_Act": true,
+      "US_EEOC": true,
+      "China_CAC": true
+    },
+    "createdAt": 1730313600000
+  },
+  {
+    "_id": "exp_003",
+    "explanationId": "bb0e8400-e29b-41d4-a716-446655440003",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440003",
+    "decisionType": "match_score",
+    "factors": {
+      "skill_gap": {
+        "missing_skills": ["kubernetes", "docker"],
+        "impact": -0.15
+      },
+      "over_qualification": {
+        "score": 0.95,
+        "risk": "high_turnover"
+      },
+      "salary_mismatch": {
+        "expected": "35k-45k",
+        "offered": "30k-40k",
+        "gap": -0.1
+      }
+    },
+    "humanOverride": true,
+    "confidenceScore": 65.0,
+    "explanationText": "AI评估显示候选人技能存在缺口，且薪资期望超出范围。人工审核认为候选人的学习能力可以弥补技能差距，且薪资可协商，因此推荐进入下一轮面试。",
+    "algorithmVersion": "v2.2.8",
+    "reviewerId": "550e8400-e29b-41d4-a716-446655440002",
+    "reviewNotes": "人工判断：学习能力强，薪资可协商",
+    "modelConfidence": 0.78,
+    "featureImportance": {
+      "skill_gap": 0.45,
+      "salary_mismatch": 0.35,
+      "over_qualification": 0.2
+    },
+    "counterfactuals": [
+      {
+        "change": "降低薪资期望",
+        "impact": "+12%",
+        "explanation": "薪资期望调整会显著提升匹配度"
+      },
+      {
+        "change": "增加Docker技能",
+        "impact": "+8%",
+        "explanation": "技能补全会提高技术匹配度"
+      }
+    ],
+    "fairnessMetrics": {
+      "demographicParity": 0.85,
+      "equalizedOdds": 0.88,
+      "calibration": 0.82
+    },
+    "explainabilityScore": 0.89,
+    "regulationCompliance": {
+      "EU_AI_Act": true,
+      "US_EEOC": true,
+      "China_CAC": true
+    },
+    "createdAt": 1730313600000
+  }
+]

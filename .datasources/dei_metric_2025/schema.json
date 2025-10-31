@@ -1,0 +1,89 @@
+
+{
+  "name": "dei_metric",
+  "title": "多样性追踪指标2025扩展版",
+  "schemas": [
+    {
+      "name": "metricId",
+      "title": "指标ID",
+      "type": "String"
+    },
+    {
+      "name": "entityType",
+      "title": "实体类型",
+      "type": "String"
+    },
+    {
+      "name": "entityId",
+      "title": "实体ID",
+      "type": "String"
+    },
+    {
+      "name": "dimension",
+      "title": "维度类型",
+      "type": "String"
+    },
+    {
+      "name": "value",
+      "title": "维度值",
+      "type": "String"
+    },
+    {
+      "name": "percentage",
+      "title": "占比百分比",
+      "type": "Number"
+    },
+    {
+      "name": "snapshotDate",
+      "title": "快照日期",
+      "type": "DateTime",
+      "format": "timestamp-ms"
+    },
+    {
+      "name": "benchmark",
+      "title": "行业基准",
+      "type": "Number"
+    },
+    {
+      "name": "trend",
+      "title": "趋势",
+      "type": "String"
+    },
+    {
+      "name": "source",
+      "title": "数据来源",
+      "type": "String"
+    },
+    {
+      "name": "benchmarkDelta",
+      "title": "基准差异",
+      "type": "Number"
+    },
+    {
+      "name": "confidenceInterval",
+      "title": "置信区间",
+      "type": "Object"
+    },
+    {
+      "name": "sampleSize",
+      "title": "样本数量",
+      "type": "Number"
+    },
+    {
+      "name": "statisticalSignificance",
+      "title": "统计显著性",
+      "type": "Number"
+    },
+    {
+      "name": "methodology",
+      "title": "计算方法",
+      "type": "String"
+    },
+    {
+      "name": "lastUpdated",
+      "title": "最后更新",
+      "type": "DateTime",
+      "format": "timestamp-ms"
+    }
+  ]
+}
