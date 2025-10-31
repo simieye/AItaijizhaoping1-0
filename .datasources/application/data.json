@@ -1,0 +1,48 @@
+
+[
+  {
+    "_id": "app_001",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440001",
+    "candidateId": "550e8400-e29b-41d4-a716-446655440001",
+    "jobId": "660e8400-e29b-41d4-a716-446655440001",
+    "status": "interview",
+    "matchScore": 92,
+    "appliedAt": 1730313600000,
+    "updatedAt": 1730400000000,
+    "notes": "技术能力突出，建议安排技术面",
+    "interviewScheduled": 1730486400000
+  },
+  {
+    "_id": "app_002",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440002",
+    "candidateId": "550e8400-e29b-41d4-a716-446655440001",
+    "jobId": "660e8400-e29b-41d4-a716-446655440002",
+    "status": "screening",
+    "matchScore": 88,
+    "appliedAt": 1730313600000,
+    "updatedAt": 1730313600000,
+    "notes": "简历筛选中，等待笔试安排"
+  },
+  {
+    "_id": "app_003",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440003",
+    "candidateId": "550e8400-e29b-41d4-a716-446655440003",
+    "jobId": "660e8400-e29b-41d4-a716-446655440003",
+    "status": "pending",
+    "matchScore": 85,
+    "appliedAt": 1730313600000,
+    "updatedAt": 1730313600000,
+    "notes": "新投递，等待初筛"
+  },
+  {
+    "_id": "app_004",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440004",
+    "candidateId": "550e8400-e29b-41d4-a716-446655440003",
+    "jobId": "660e8400-e29b-41d4-a716-446655440001",
+    "status": "rejected",
+    "matchScore": 65,
+    "appliedAt": 1730313600000,
+    "updatedAt": 1730313600000,
+    "notes": "技能匹配度不足"
+  }
+]

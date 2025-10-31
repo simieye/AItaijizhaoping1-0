@@ -1,0 +1,55 @@
+
+[
+  {
+    "_id": "msg_001",
+    "messageId": "880e8400-e29b-41d4-a716-446655440001",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440001",
+    "senderId": "550e8400-e29b-41d4-a716-446655440002",
+    "type": "text",
+    "contentUrl": null,
+    "textContent": "您好！我是腾讯科技的HR，看到您的简历很感兴趣，想邀请您面试。",
+    "timestamp": 1730313600000,
+    "isRead": true,
+    "emotion": "友好",
+    "duration": 0
+  },
+  {
+    "_id": "msg_002",
+    "messageId": "880e8400-e29b-41d4-a716-446655440002",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440001",
+    "senderId": "550e8400-e29b-41d4-a716-446655440001",
+    "type": "text",
+    "contentUrl": null,
+    "textContent": "感谢您的回复，我很感兴趣，请问面试时间安排如何？",
+    "timestamp": 1730313660000,
+    "isRead": true,
+    "emotion": "积极",
+    "duration": 0
+  },
+  {
+    "_id": "msg_003",
+    "messageId": "880e8400-e29b-41d4-a716-446655440003",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440001",
+    "senderId": "550e8400-e29b-41d4-a716-446655440002",
+    "type": "text",
+    "contentUrl": null,
+    "textContent": "我们安排在明天下午3点进行视频面试，您方便吗？",
+    "timestamp": 1730313720000,
+    "isRead": false,
+    "emotion": "询问",
+    "duration": 0
+  },
+  {
+    "_id": "msg_004",
+    "messageId": "880e8400-e29b-41d4-a716-446655440004",
+    "applicationId": "770e8400-e29b-41d4-a716-446655440002",
+    "senderId": "550e8400-e29b-41d4-a716-446655440004",
+    "type": "voice",
+    "contentUrl": "https://example.com/voices/recruiter_voice_001.mp3",
+    "textContent": "您好，这里是字节跳动招聘团队...",
+    "timestamp": 1730313600000,
+    "isRead": true,
+    "emotion": "专业",
+    "duration": 45
+  }
+]

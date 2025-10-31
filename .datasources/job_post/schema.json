@@ -1,0 +1,83 @@
+
+{
+  "name": "job_post",
+  "title": "职位发布",
+  "schemas": [
+    {
+      "name": "jobId",
+      "title": "职位ID",
+      "type": "String"
+    },
+    {
+      "name": "recruiterId",
+      "title": "招聘者ID",
+      "type": "String"
+    },
+    {
+      "name": "title",
+      "title": "职位名称",
+      "type": "String"
+    },
+    {
+      "name": "description",
+      "title": "职位描述",
+      "type": "RichText"
+    },
+    {
+      "name": "isAIGenerated",
+      "title": "AI生成标记",
+      "type": "Boolean"
+    },
+    {
+      "name": "requirements",
+      "title": "职位要求",
+      "type": "Array",
+      "items": {
+        "type": "String"
+      }
+    },
+    {
+      "name": "salaryRange",
+      "title": "薪资范围",
+      "type": "String"
+    },
+    {
+      "name": "location",
+      "title": "工作地点",
+      "type": "String"
+    },
+    {
+      "name": "remoteType",
+      "title": "远程类型",
+      "type": "String"
+    },
+    {
+      "name": "status",
+      "title": "职位状态",
+      "type": "String"
+    },
+    {
+      "name": "skills",
+      "title": "技能要求",
+      "type": "Array",
+      "items": {
+        "type": "String"
+      }
+    },
+    {
+      "name": "experienceYears",
+      "title": "经验要求",
+      "type": "String"
+    },
+    {
+      "name": "department",
+      "title": "所属部门",
+      "type": "String"
+    },
+    {
+      "name": "teamSize",
+      "title": "团队规模",
+      "type": "String"
+    }
+  ]
+}

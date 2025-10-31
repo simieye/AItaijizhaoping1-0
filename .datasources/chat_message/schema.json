@@ -1,0 +1,58 @@
+
+{
+  "name": "chat_message",
+  "title": "聊天消息",
+  "schemas": [
+    {
+      "name": "messageId",
+      "title": "消息ID",
+      "type": "String"
+    },
+    {
+      "name": "applicationId",
+      "title": "申请ID",
+      "type": "String"
+    },
+    {
+      "name": "senderId",
+      "title": "发送者ID",
+      "type": "String"
+    },
+    {
+      "name": "type",
+      "title": "消息类型",
+      "type": "String"
+    },
+    {
+      "name": "contentUrl",
+      "title": "内容链接",
+      "type": "Url"
+    },
+    {
+      "name": "textContent",
+      "title": "文本内容",
+      "type": "String"
+    },
+    {
+      "name": "timestamp",
+      "title": "发送时间",
+      "type": "DateTime",
+      "format": "timestamp-ms"
+    },
+    {
+      "name": "isRead",
+      "title": "是否已读",
+      "type": "Boolean"
+    },
+    {
+      "name": "emotion",
+      "title": "情绪分析",
+      "type": "String"
+    },
+    {
+      "name": "duration",
+      "title": "语音/视频时长",
+      "type": "Number"
+    }
+  ]
+}

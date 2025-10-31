@@ -1,0 +1,30 @@
+
+[
+  {
+    "_id": "user_001",
+    "userId": "550e8400-e29b-41d4-a716-446655440001",
+    "role": "candidate",
+    "email": "zhangsan@example.com",
+    "phone": "13800138001",
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "user_002",
+    "userId": "550e8400-e29b-41d4-a716-446655440002",
+    "role": "recruiter",
+    "email": "hr@tencent.com",
+    "phone": "13900139001",
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  },
+  {
+    "_id": "user_003",
+    "userId": "550e8400-e29b-41d4-a716-446655440003",
+    "role": "candidate",
+    "email": "lisi@example.com",
+    "phone": "13700137001",
+    "createdAt": 1730313600000,
+    "updatedAt": 1730313600000
+  }
+]

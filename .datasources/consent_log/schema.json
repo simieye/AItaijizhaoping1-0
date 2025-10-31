@@ -1,0 +1,63 @@
+
+{
+  "name": "consent_log",
+  "title": "用户授权记录",
+  "schemas": [
+    {
+      "name": "consentId",
+      "title": "授权ID",
+      "type": "String"
+    },
+    {
+      "name": "userId",
+      "title": "用户ID",
+      "type": "String"
+    },
+    {
+      "name": "consentType",
+      "title": "授权类型",
+      "type": "String"
+    },
+    {
+      "name": "scope",
+      "title": "授权范围",
+      "type": "Object"
+    },
+    {
+      "name": "ip",
+      "title": "IP地址",
+      "type": "String"
+    },
+    {
+      "name": "userAgent",
+      "title": "用户代理",
+      "type": "String"
+    },
+    {
+      "name": "withdrawable",
+      "title": "是否可撤回",
+      "type": "Boolean"
+    },
+    {
+      "name": "withdrawn",
+      "title": "是否已撤回",
+      "type": "Boolean"
+    },
+    {
+      "name": "withdrawnAt",
+      "title": "撤回时间",
+      "type": "DateTime",
+      "format": "timestamp-ms"
+    },
+    {
+      "name": "consentText",
+      "title": "授权文本",
+      "type": "String"
+    },
+    {
+      "name": "regulation",
+      "title": "适用法规",
+      "type": "String"
+    }
+  ]
+}

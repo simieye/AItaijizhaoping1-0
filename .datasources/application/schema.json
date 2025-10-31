@@ -1,0 +1,55 @@
+
+{
+  "name": "application",
+  "title": "职位申请记录",
+  "schemas": [
+    {
+      "name": "applicationId",
+      "title": "申请ID",
+      "type": "String"
+    },
+    {
+      "name": "candidateId",
+      "title": "求职者ID",
+      "type": "String"
+    },
+    {
+      "name": "jobId",
+      "title": "职位ID",
+      "type": "String"
+    },
+    {
+      "name": "status",
+      "title": "申请状态",
+      "type": "String"
+    },
+    {
+      "name": "matchScore",
+      "title": "匹配度分数",
+      "type": "Number"
+    },
+    {
+      "name": "appliedAt",
+      "title": "申请时间",
+      "type": "DateTime",
+      "format": "timestamp-ms"
+    },
+    {
+      "name": "updatedAt",
+      "title": "更新时间",
+      "type": "DateTime",
+      "format": "timestamp-ms"
+    },
+    {
+      "name": "notes",
+      "title": "备注信息",
+      "type": "String"
+    },
+    {
+      "name": "interviewScheduled",
+      "title": "面试安排",
+      "type": "DateTime",
+      "format": "timestamp-ms"
+    }
+  ]
+}

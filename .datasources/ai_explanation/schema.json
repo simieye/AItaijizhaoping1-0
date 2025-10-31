@@ -1,0 +1,57 @@
+
+{
+  "name": "ai_explanation",
+  "title": "AI决策解释",
+  "schemas": [
+    {
+      "name": "explanationId",
+      "title": "解释ID",
+      "type": "String"
+    },
+    {
+      "name": "applicationId",
+      "title": "申请ID",
+      "type": "String"
+    },
+    {
+      "name": "decisionType",
+      "title": "决策类型",
+      "type": "String"
+    },
+    {
+      "name": "factors",
+      "title": "决策因素",
+      "type": "Object"
+    },
+    {
+      "name": "humanOverride",
+      "title": "人工覆盖",
+      "type": "Boolean"
+    },
+    {
+      "name": "confidenceScore",
+      "title": "置信度评分",
+      "type": "Number"
+    },
+    {
+      "name": "explanationText",
+      "title": "解释文本",
+      "type": "String"
+    },
+    {
+      "name": "algorithmVersion",
+      "title": "算法版本",
+      "type": "String"
+    },
+    {
+      "name": "reviewerId",
+      "title": "审核员ID",
+      "type": "String"
+    },
+    {
+      "name": "reviewNotes",
+      "title": "审核备注",
+      "type": "String"
+    }
+  ]
+}

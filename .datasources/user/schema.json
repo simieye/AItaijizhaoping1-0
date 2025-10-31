@@ -1,0 +1,27 @@
+
+{
+  "name": "user",
+  "title": "用户基础信息",
+  "schemas": [
+    {
+      "name": "userId",
+      "title": "用户ID",
+      "type": "String"
+    },
+    {
+      "name": "role",
+      "title": "用户角色",
+      "type": "String"
+    },
+    {
+      "name": "email",
+      "title": "邮箱地址",
+      "type": "Email"
+    },
+    {
+      "name": "phone",
+      "title": "手机号码",
+      "type": "String"
+    }
+  ]
+}

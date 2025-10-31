@@ -1,0 +1,32 @@
+
+{
+  "name": "recruiter_profile",
+  "title": "招聘者档案",
+  "schemas": [
+    {
+      "name": "userId",
+      "title": "用户ID",
+      "type": "String"
+    },
+    {
+      "name": "companyName",
+      "title": "公司名称",
+      "type": "String"
+    },
+    {
+      "name": "companyLogo",
+      "title": "公司Logo",
+      "type": "Image"
+    },
+    {
+      "name": "department",
+      "title": "所属部门",
+      "type": "String"
+    },
+    {
+      "name": "position",
+      "title": "职位",
+      "type": "String"
+    }
+  ]
+}

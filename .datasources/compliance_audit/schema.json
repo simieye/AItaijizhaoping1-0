@@ -1,0 +1,57 @@
+
+{
+  "name": "compliance_audit",
+  "title": "合规审计记录",
+  "schemas": [
+    {
+      "name": "auditId",
+      "title": "审计ID",
+      "type": "String"
+    },
+    {
+      "name": "entityType",
+      "title": "实体类型",
+      "type": "String"
+    },
+    {
+      "name": "entityId",
+      "title": "实体ID",
+      "type": "String"
+    },
+    {
+      "name": "regulation",
+      "title": "法规类型",
+      "type": "String"
+    },
+    {
+      "name": "auditType",
+      "title": "审计类型",
+      "type": "String"
+    },
+    {
+      "name": "score",
+      "title": "合规评分",
+      "type": "Number"
+    },
+    {
+      "name": "details",
+      "title": "审计详情",
+      "type": "Object"
+    },
+    {
+      "name": "operatorId",
+      "title": "操作员ID",
+      "type": "String"
+    },
+    {
+      "name": "status",
+      "title": "审计状态",
+      "type": "String"
+    },
+    {
+      "name": "notes",
+      "title": "备注信息",
+      "type": "String"
+    }
+  ]
+}

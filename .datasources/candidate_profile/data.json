@@ -1,0 +1,45 @@
+
+[
+  {
+    "_id": "candidate_001",
+    "userId": "550e8400-e29b-41d4-a716-446655440001",
+    "fullName": "张三",
+    "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face",
+    "resumeUrl": [
+      {
+        "name": "张三_前端开发_简历.pdf",
+        "url": "https://example.com/resumes/zhangsan_resume.pdf",
+        "type": "application/pdf",
+        "uploadTime": 1730313600000
+      }
+    ],
+    "videoIntroUrl": "https://example.com/videos/zhangsan_intro.mp4",
+    "skills": ["React", "Vue", "Node.js", "TypeScript", "JavaScript", "CSS", "HTML"],
+    "experienceYears": 5,
+    "preferredSalary": "25k-35k",
+    "location": "深圳",
+    "languages": ["中文", "英文"],
+    "createdAt": 1730313600000
+  },
+  {
+    "_id": "candidate_002",
+    "userId": "550e8400-e29b-41d4-a716-446655440003",
+    "fullName": "李四",
+    "avatarUrl": "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=200&h=200&fit=crop&crop=face",
+    "resumeUrl": [
+      {
+        "name": "李四_全栈开发_简历.pdf",
+        "url": "https://example.com/resumes/lisi_resume.pdf",
+        "type": "application/pdf",
+        "uploadTime": 1730313600000
+      }
+    ],
+    "videoIntroUrl": "https://example.com/videos/lisi_intro.mp4",
+    "skills": ["Python", "Django", "React", "AWS", "Docker", "Kubernetes"],
+    "experienceYears": 3,
+    "preferredSalary": "20k-30k",
+    "location": "北京",
+    "languages": ["中文", "英文", "日文"],
+    "createdAt": 1730313600000
+  }
+]

@@ -1,0 +1,21 @@
+
+[
+  {
+    "_id": "recruiter_001",
+    "userId": "550e8400-e29b-41d4-a716-446655440002",
+    "companyName": "腾讯科技",
+    "companyLogo": "https://example.com/logos/tencent_logo.png",
+    "department": "技术部",
+    "position": "高级招聘经理",
+    "createdAt": 1730313600000
+  },
+  {
+    "_id": "recruiter_002",
+    "userId": "550e8400-e29b-41d4-a716-446655440004",
+    "companyName": "字节跳动",
+    "companyLogo": "https://example.com/logos/bytedance_logo.png",
+    "department": "人力资源部",
+    "position": "技术招聘专家",
+    "createdAt": 1730313600000
+  }
+]
